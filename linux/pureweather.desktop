@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=极光天气
+Comment=极光天气 - 一款使用 Aurora UI 的天气应用
+Exec=pureweather
+Icon=pureweather
+Terminal=false
+Type=Application
+Categories=Utility;Weather;
+StartupNotify=true
+AppAssets_2026-06-15/*

@@ -1,0 +1,504 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+/// 位置精度级别枚举
+///
+/// - district: 区县级别
+/// - street: 街道级别
+enum LocationAccuracyLevel { district, street }
+
+/// 应用语言枚举
+///
+/// - system: 跟随系统
+/// - zhCN: 简体中文
+/// - enUS: English (US)
+enum AppLanguage { system, zhCN, enUS }
+
+/// AI 服务提供商枚举
+///
+/// - openAiCompatible: OpenAI 兼容接口
+/// - anthropic: Anthropic Messages API
+enum AiProviderType { openAiCompatible, anthropic }
+
+/// 应用设置类
+///
+/// 管理应用的所有设置选项
+class AppSettings {
+  /// 是否启用预测性返回
+  final bool predictiveBackEnabled;
+
+  /// 是否启用通知
+  final bool notificationsEnabled;
+
+  /// 是否启用 Android 实时更新通知
+  final bool androidLiveUpdateNotificationEnabled;
+
+  /// 是否启用自动刷新
+  final bool autoRefreshEnabled;
+
+  /// 刷新间隔（分钟）
+  final int refreshInterval;
+
+  /// 温度单位
+  final String temperatureUnit;
+
+  /// 是否显示体感温度
+  final bool showFeelsLike;
+
+  /// 是否显示天气助手
+  final bool showAIAssistant;
+
+  /// AI 服务提供商
+  final AiProviderType aiProviderType;
+
+  /// AI 服务 API Key
+  final String aiApiKey;
+
+  /// AI 服务基础地址
+  final String aiBaseUrl;
+
+  /// AI 模型名称
+  final String aiModel;
+
+  /// 位置精度级别
+  final LocationAccuracyLevel locationAccuracyLevel;
+
+  /// 应用语言
+  final AppLanguage appLanguage;
+
+  /// 天气卡片顺序
+  final List<String> weatherCardOrder;
+
+  /// 构造函数
+  const AppSettings({
+    this.predictiveBackEnabled = false,
+    this.notificationsEnabled = true,
+    this.androidLiveUpdateNotificationEnabled = false,
+    this.autoRefreshEnabled = true,
+    this.refreshInterval = 30,
+    this.temperatureUnit = 'celsius',
+    this.showFeelsLike = true,
+    this.showAIAssistant = false,
+    this.aiProviderType = AiProviderType.openAiCompatible,
+    this.aiApiKey = '',
+    this.aiBaseUrl = 'https://api.openai.com/v1',
+    this.aiModel = '',
+    this.locationAccuracyLevel = LocationAccuracyLevel.district,
+    this.appLanguage = AppLanguage.system,
+    this.weatherCardOrder = const [
+      'hourly',
+      'daily',
+      'airQuality',
+      'details',
+      'indices',
+    ],
+  });
+
+  /// 复制并更新设置
+  ///
+  /// [predictiveBackEnabled]: 是否启用预测性返回
+  /// [notificationsEnabled]: 是否启用通知
+  /// [androidLiveUpdateNotificationEnabled]: 是否启用 Android 实时更新通知
+  /// [autoRefreshEnabled]: 是否启用自动刷新
+  /// [refreshInterval]: 刷新间隔
+  /// [temperatureUnit]: 温度单位
+  /// [showFeelsLike]: 是否显示体感温度
+  /// [showAIAssistant]: 是否显示天气助手
+  /// [aiProviderType]: AI 服务提供商
+  /// [aiApiKey]: AI 服务 API Key
+  /// [aiBaseUrl]: AI 服务基础地址
+  /// [aiModel]: AI 模型名称
+  /// [locationAccuracyLevel]: 位置精度级别
+  /// [appLanguage]: 应用语言
+  /// [weatherCardOrder]: 天气卡片顺序
+  AppSettings copyWith({
+    bool? predictiveBackEnabled,
+    bool? notificationsEnabled,
+    bool? androidLiveUpdateNotificationEnabled,
+    bool? autoRefreshEnabled,
+    int? refreshInterval,
+    String? temperatureUnit,
+    bool? showFeelsLike,
+    bool? showAIAssistant,
+    AiProviderType? aiProviderType,
+    String? aiApiKey,
+    String? aiBaseUrl,
+    String? aiModel,
+    LocationAccuracyLevel? locationAccuracyLevel,
+    AppLanguage? appLanguage,
+    List<String>? weatherCardOrder,
+  }) {
+    return AppSettings(
+      predictiveBackEnabled:
+          predictiveBackEnabled ?? this.predictiveBackEnabled,
+      notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+      androidLiveUpdateNotificationEnabled:
+          androidLiveUpdateNotificationEnabled ??
+          this.androidLiveUpdateNotificationEnabled,
+      autoRefreshEnabled: autoRefreshEnabled ?? this.autoRefreshEnabled,
+      refreshInterval: refreshInterval ?? this.refreshInterval,
+      temperatureUnit: temperatureUnit ?? this.temperatureUnit,
+      showFeelsLike: showFeelsLike ?? this.showFeelsLike,
+      showAIAssistant: showAIAssistant ?? this.showAIAssistant,
+      aiProviderType: aiProviderType ?? this.aiProviderType,
+      aiApiKey: aiApiKey ?? this.aiApiKey,
+      aiBaseUrl: aiBaseUrl ?? this.aiBaseUrl,
+      aiModel: aiModel ?? this.aiModel,
+      locationAccuracyLevel:
+          locationAccuracyLevel ?? this.locationAccuracyLevel,
+      appLanguage: appLanguage ?? this.appLanguage,
+      weatherCardOrder: weatherCardOrder ?? this.weatherCardOrder,
+    );
+  }
+}
+
+/// 设置状态管理类
+///
+/// 负责管理应用设置的加载、保存和更新
+class SettingsNotifier extends StateNotifier<AppSettings> {
+  /// 预测性返回设置键
+  static const String _keyPredictiveBack = 'predictive_back_enabled';
+
+  /// 通知设置键
+  static const String _keyNotifications = 'notifications_enabled';
+
+  /// Android 实时更新通知设置键
+  static const String _keyAndroidLiveUpdateNotification =
+      'android_live_update_notification_enabled';
+
+  /// 自动刷新设置键
+  static const String _keyAutoRefresh = 'auto_refresh_enabled';
+
+  /// 刷新间隔设置键
+  static const String _keyRefreshInterval = 'refresh_interval';
+
+  /// 温度单位设置键
+  static const String _keyTemperatureUnit = 'temperature_unit';
+
+  /// 显示体感温度设置键
+  static const String _keyShowFeelsLike = 'show_feels_like';
+
+  /// 显示天气助手设置键
+  static const String _keyShowAIAssistant = 'show_ai_assistant';
+
+  /// AI 服务提供商设置键
+  static const String _keyAiProviderType = 'ai_provider_type';
+
+  /// AI 服务 API Key 设置键
+  static const String _keyAiApiKey = 'ai_api_key';
+
+  /// AI 服务基础地址设置键
+  static const String _keyAiBaseUrl = 'ai_base_url';
+
+  /// AI 模型名称设置键
+  static const String _keyAiModel = 'ai_model';
+
+  /// 位置精度级别设置键
+  static const String _keyLocationAccuracyLevel = 'location_accuracy_level';
+
+  /// 应用语言设置键
+  static const String _keyAppLanguage = 'app_language';
+
+  /// 天气卡片顺序设置键
+  static const String _keyWeatherCardOrder = 'weather_card_order';
+
+  /// 构造函数
+  SettingsNotifier() : super(const AppSettings()) {
+    _loadSettings();
+  }
+
+  /// 从本地存储加载设置
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // 加载位置精度级别
+    final savedLevel = prefs.getString(_keyLocationAccuracyLevel);
+    LocationAccuracyLevel accuracyLevel = LocationAccuracyLevel.district;
+    if (savedLevel == 'street') {
+      accuracyLevel = LocationAccuracyLevel.street;
+    }
+
+    // 加载应用语言
+    final savedLanguage = prefs.getString(_keyAppLanguage);
+    final appLanguage = _parseAppLanguage(savedLanguage);
+
+    // 加载 AI 设置
+    final aiProviderType = _parseAiProviderType(
+      prefs.getString(_keyAiProviderType),
+    );
+
+    // 加载并修复天气卡片顺序
+    final savedOrder = prefs.getStringList(_keyWeatherCardOrder);
+    const validOrder = ['hourly', 'daily', 'airQuality', 'details', 'indices'];
+    final validatedOrder = _normalizeCardOrder(savedOrder, validOrder);
+    if (savedOrder == null || !_listEquals(savedOrder, validatedOrder)) {
+      await prefs.setStringList(_keyWeatherCardOrder, validatedOrder);
+    }
+
+    // 更新状态
+    state = AppSettings(
+      predictiveBackEnabled: prefs.getBool(_keyPredictiveBack) ?? false,
+      notificationsEnabled: prefs.getBool(_keyNotifications) ?? true,
+      androidLiveUpdateNotificationEnabled:
+          prefs.getBool(_keyAndroidLiveUpdateNotification) ?? false,
+      autoRefreshEnabled: prefs.getBool(_keyAutoRefresh) ?? true,
+      refreshInterval: prefs.getInt(_keyRefreshInterval) ?? 30,
+      temperatureUnit: prefs.getString(_keyTemperatureUnit) ?? 'celsius',
+      showFeelsLike: prefs.getBool(_keyShowFeelsLike) ?? true,
+      showAIAssistant: prefs.getBool(_keyShowAIAssistant) ?? false,
+      aiProviderType: aiProviderType,
+      aiApiKey: prefs.getString(_keyAiApiKey) ?? '',
+      aiBaseUrl:
+          prefs.getString(_keyAiBaseUrl) ?? _defaultAiBaseUrl(aiProviderType),
+      aiModel: prefs.getString(_keyAiModel) ?? '',
+      locationAccuracyLevel: accuracyLevel,
+      appLanguage: appLanguage,
+      weatherCardOrder: validatedOrder,
+    );
+  }
+
+  /// 设置是否启用预测性返回
+  ///
+  /// [value]: 是否启用
+  Future<void> setPredictiveBackEnabled(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyPredictiveBack, value);
+    state = state.copyWith(predictiveBackEnabled: value);
+  }
+
+  /// 设置是否启用通知
+  ///
+  /// [value]: 是否启用
+  Future<void> setNotificationsEnabled(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyNotifications, value);
+    state = state.copyWith(notificationsEnabled: value);
+  }
+
+  /// 设置是否启用 Android 实时更新通知
+  ///
+  /// [value]: 是否启用
+  Future<void> setAndroidLiveUpdateNotificationEnabled(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyAndroidLiveUpdateNotification, value);
+    state = state.copyWith(androidLiveUpdateNotificationEnabled: value);
+  }
+
+  /// 设置是否启用自动刷新
+  ///
+  /// [value]: 是否启用
+  Future<void> setAutoRefreshEnabled(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyAutoRefresh, value);
+    state = state.copyWith(autoRefreshEnabled: value);
+  }
+
+  /// 设置刷新间隔
+  ///
+  /// [value]: 刷新间隔（分钟）
+  Future<void> setRefreshInterval(int value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyRefreshInterval, value);
+    state = state.copyWith(refreshInterval: value);
+  }
+
+  /// 设置温度单位
+  ///
+  /// [value]: 温度单位
+  Future<void> setTemperatureUnit(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyTemperatureUnit, value);
+    state = state.copyWith(temperatureUnit: value);
+  }
+
+  /// 设置是否显示体感温度
+  ///
+  /// [value]: 是否显示
+  Future<void> setShowFeelsLike(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyShowFeelsLike, value);
+    state = state.copyWith(showFeelsLike: value);
+  }
+
+  /// 设置是否显示天气助手
+  ///
+  /// [value]: 是否显示
+  Future<void> setShowAIAssistant(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyShowAIAssistant, value);
+    state = state.copyWith(showAIAssistant: value);
+  }
+
+  /// 设置 AI 服务提供商
+  ///
+  /// [value]: AI 服务提供商
+  Future<void> setAiProviderType(AiProviderType value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyAiProviderType, _serializeAiProviderType(value));
+    final currentBaseUrl = state.aiBaseUrl.trim();
+    final shouldUseDefault =
+        currentBaseUrl.isEmpty ||
+        currentBaseUrl == _defaultAiBaseUrl(state.aiProviderType);
+    final nextBaseUrl = shouldUseDefault
+        ? _defaultAiBaseUrl(value)
+        : currentBaseUrl;
+    await prefs.setString(_keyAiBaseUrl, nextBaseUrl);
+    state = state.copyWith(aiProviderType: value, aiBaseUrl: nextBaseUrl);
+  }
+
+  /// 设置 AI 服务 API Key
+  ///
+  /// [value]: AI 服务 API Key
+  Future<void> setAiApiKey(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    final trimmed = value.trim();
+    await prefs.setString(_keyAiApiKey, trimmed);
+    state = state.copyWith(aiApiKey: trimmed);
+  }
+
+  /// 设置 AI 服务基础地址
+  ///
+  /// [value]: AI 服务基础地址
+  Future<void> setAiBaseUrl(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    final normalized = value.trim();
+    await prefs.setString(_keyAiBaseUrl, normalized);
+    state = state.copyWith(aiBaseUrl: normalized);
+  }
+
+  /// 设置 AI 模型名称
+  ///
+  /// [value]: AI 模型名称
+  Future<void> setAiModel(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    final trimmed = value.trim();
+    await prefs.setString(_keyAiModel, trimmed);
+    state = state.copyWith(aiModel: trimmed);
+  }
+
+  /// 设置位置精度级别
+  ///
+  /// [value]: 位置精度级别
+  Future<void> setLocationAccuracyLevel(LocationAccuracyLevel value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _keyLocationAccuracyLevel,
+      value == LocationAccuracyLevel.street ? 'street' : 'district',
+    );
+    state = state.copyWith(locationAccuracyLevel: value);
+  }
+
+  /// 设置应用语言
+  ///
+  /// [value]: 应用语言
+  Future<void> setAppLanguage(AppLanguage value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyAppLanguage, _serializeAppLanguage(value));
+    state = state.copyWith(appLanguage: value);
+  }
+
+  /// 设置天气卡片顺序
+  ///
+  /// [value]: 天气卡片顺序
+  Future<void> setWeatherCardOrder(List<String> value) async {
+    // 验证并自动补全缺失卡片
+    const validOrder = ['hourly', 'daily', 'airQuality', 'details', 'indices'];
+    final validatedOrder = _normalizeCardOrder(value, validOrder);
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_keyWeatherCardOrder, validatedOrder);
+    state = state.copyWith(weatherCardOrder: validatedOrder);
+  }
+
+  List<String> _normalizeCardOrder(
+    List<String>? savedOrder,
+    List<String> validOrder,
+  ) {
+    if (savedOrder == null || savedOrder.isEmpty) {
+      return List<String>.from(validOrder);
+    }
+
+    final seen = <String>{};
+    final normalized = <String>[];
+    for (final card in savedOrder) {
+      if (validOrder.contains(card) && !seen.contains(card)) {
+        normalized.add(card);
+        seen.add(card);
+      }
+    }
+
+    for (final card in validOrder) {
+      if (!seen.contains(card)) {
+        normalized.add(card);
+      }
+    }
+
+    return normalized;
+  }
+
+  AppLanguage _parseAppLanguage(String? value) {
+    switch (value) {
+      case 'zh_CN':
+        return AppLanguage.zhCN;
+      case 'en_US':
+        return AppLanguage.enUS;
+      default:
+        return AppLanguage.system;
+    }
+  }
+
+  AiProviderType _parseAiProviderType(String? value) {
+    switch (value) {
+      case 'anthropic':
+        return AiProviderType.anthropic;
+      default:
+        return AiProviderType.openAiCompatible;
+    }
+  }
+
+  String _serializeAiProviderType(AiProviderType value) {
+    switch (value) {
+      case AiProviderType.anthropic:
+        return 'anthropic';
+      case AiProviderType.openAiCompatible:
+        return 'openai_compatible';
+    }
+  }
+
+  String _defaultAiBaseUrl(AiProviderType value) {
+    switch (value) {
+      case AiProviderType.anthropic:
+        return 'https://api.anthropic.com/v1';
+      case AiProviderType.openAiCompatible:
+        return 'https://api.openai.com/v1';
+    }
+  }
+
+  String _serializeAppLanguage(AppLanguage value) {
+    switch (value) {
+      case AppLanguage.zhCN:
+        return 'zh_CN';
+      case AppLanguage.enUS:
+        return 'en_US';
+      case AppLanguage.system:
+        return 'system';
+    }
+  }
+
+  bool _listEquals(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+}
+
+/// 设置Provider
+///
+/// 提供应用设置的状态管理
+final settingsProvider = StateNotifierProvider<SettingsNotifier, AppSettings>((
+  ref,
+) {
+  return SettingsNotifier();
+});

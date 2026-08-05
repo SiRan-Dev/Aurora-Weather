@@ -1,0 +1,485 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  FLUTTER_VERSION: '3.41.3'
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  # ============================================================================
+  # Android Builds (arm64 release + arm64 debug)
+  # ============================================================================
+  build-android:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - mode: release
+            mode_flag: --release
+            apk_file: app-release.apk
+            output_suffix: android-release
+          - mode: debug
+            mode_flag: --debug
+            apk_file: app-debug.apk
+            output_suffix: android-debug
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Get version from git tag
+        id: version
+        run: |
+          LATEST_TAG=$(git tag --list 'v*' --sort=-v:refname | head -n 1)
+          [[ -z "$LATEST_TAG" ]] && LATEST_TAG="v0.0.0"
+          VERSION="${LATEST_TAG#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - name: Determine release tag
+        id: release_tag
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=dev-build-${{ github.run_number }}" >> $GITHUB_OUTPUT
+          fi
+      - name: Create release
+        run: |
+          TAG="${{ steps.release_tag.outputs.tag }}"
+          ARGS=(--title "AuroraWeather$TAG" --generate-notes)
+          [[ "${{ github.ref_type }}" != "tag" ]] && ARGS+=(--prerelease)
+          gh release create "$TAG" "${ARGS[@]}" 2>/dev/null || true
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('android/**/*.gradle*', 'android/**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Restore Android release keystore
+        if: matrix.mode == 'release'
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > PureWaether
+      - name: Generate .env
+        env:
+          QWEATHER_API_KEY: ${{ secrets.QWEATHER_API_KEY }}
+          CAIYUN_API_KEY: ${{ secrets.CAIYUN_API_KEY }}
+          AMAP_API_KEY: ${{ secrets.AMAP_API_KEY }}
+          AMAP_WEB_KEY: ${{ secrets.AMAP_WEB_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          cat > .env << EOF
+          QWEATHER_API_KEY=$QWEATHER_API_KEY
+          CAIYUN_API_KEY=$CAIYUN_API_KEY
+          AMAP_API_KEY=$AMAP_API_KEY
+          AMAP_WEB_KEY=$AMAP_WEB_KEY
+          DEEPSEEK_API_KEY=$DEEPSEEK_API_KEY
+          EOF
+      - name: Build Android APK (${{ matrix.mode }})
+        env:
+          QWEATHER_API_KEY: ${{ secrets.QWEATHER_API_KEY }}
+          CAIYUN_API_KEY: ${{ secrets.CAIYUN_API_KEY }}
+          AMAP_API_KEY: ${{ secrets.AMAP_API_KEY }}
+          AMAP_WEB_KEY: ${{ secrets.AMAP_WEB_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          SIGNING_KEYSTORE_PATH: ../PureWaether
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          BUILD_NAME="${{ steps.version.outputs.version }}"
+          flutter build apk ${{ matrix.mode_flag }} \
+            --target-platform=android-arm64 \
+            -t lib/main.dart \
+            --build-name="$BUILD_NAME" \
+            --build-number="$GITHUB_RUN_NUMBER" \
+            --dart-define=QWEATHER_API_KEY="$QWEATHER_API_KEY" \
+            --dart-define=CAIYUN_API_KEY="$CAIYUN_API_KEY" \
+            --dart-define=AMAP_API_KEY="$AMAP_API_KEY" \
+            --dart-define=AMAP_WEB_KEY="$AMAP_WEB_KEY" \
+            --dart-define=DEEPSEEK_API_KEY="$DEEPSEEK_API_KEY"
+      - name: Rename and upload APK
+        run: |
+          SRC="build/app/outputs/flutter-apk/${{ matrix.apk_file }}"
+          if [ ! -f "$SRC" ]; then
+            echo "APK not found: $SRC"
+            ls -la build/app/outputs/flutter-apk || true
+            exit 1
+          fi
+          DST="build/app/outputs/flutter-apk/AuroraWeather-${{ steps.version.outputs.version }}-android-arm64-v8a-${{ matrix.mode }}.apk"
+          cp "$SRC" "$DST"
+          gh release upload "${{ steps.release_tag.outputs.tag }}" "$DST" --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  # ============================================================================
+  # Windows Builds
+  # ============================================================================
+  build-windows-x86_64:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Get version from git tag
+        id: version
+        shell: pwsh
+        run: |
+          $raw = git tag --list "v*" --sort=-v:refname | Select-Object -First 1
+          if (-not $raw) { $raw = "v0.0.0" }
+          $version = $raw -replace '^v', ''
+          echo "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding UTF8 -Append
+      - name: Determine release tag
+        id: release_tag
+        shell: pwsh
+        run: |
+          if ("$env:GITHUB_REF_TYPE" -eq "tag") {
+            $tag = "$env:GITHUB_REF_NAME"
+          } else {
+            $tag = "dev-build-$env:GITHUB_RUN_NUMBER"
+          }
+          echo "tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding UTF8 -Append
+      - name: Create release
+        shell: pwsh
+        run: |
+          $tag = "${{ steps.release_tag.outputs.tag }}"
+          $isPrerelease = ("$env:GITHUB_REF_TYPE" -ne "tag")
+          $args = @($tag, "--title", "AuroraWeather $tag", "--generate-notes")
+          if ($isPrerelease) { $args += "--prerelease" }
+          gh release create @args 2>&1 | Out-Null
+          echo "Release tag: $tag (exists or created)"
+          exit 0
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Generate .env
+        shell: pwsh
+        env:
+          QWEATHER_API_KEY: ${{ secrets.QWEATHER_API_KEY }}
+          CAIYUN_API_KEY: ${{ secrets.CAIYUN_API_KEY }}
+          AMAP_API_KEY: ${{ secrets.AMAP_API_KEY }}
+          AMAP_WEB_KEY: ${{ secrets.AMAP_WEB_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          @"
+          QWEATHER_API_KEY=$env:QWEATHER_API_KEY
+          CAIYUN_API_KEY=$env:CAIYUN_API_KEY
+          AMAP_API_KEY=$env:AMAP_API_KEY
+          AMAP_WEB_KEY=$env:AMAP_WEB_KEY
+          DEEPSEEK_API_KEY=$env:DEEPSEEK_API_KEY
+          "@ | Set-Content -Path .env -Encoding UTF8
+      - name: Build Windows x86_64
+        shell: pwsh
+        env:
+          QWEATHER_API_KEY: ${{ secrets.QWEATHER_API_KEY }}
+          CAIYUN_API_KEY: ${{ secrets.CAIYUN_API_KEY }}
+          AMAP_API_KEY: ${{ secrets.AMAP_API_KEY }}
+          AMAP_WEB_KEY: ${{ secrets.AMAP_WEB_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          $ref = "${{ steps.version.outputs.version }}"
+          $parts = $ref -split '-'
+          $displayVersion = $ref
+          $baseVersion = $parts[0]
+          $buildPart = if ($parts.Count -gt 1) { $parts[1] } else { "0" }
+          $numericVersion = "$baseVersion.$buildPart"
+          flutter build windows --release `
+            --build-name="$displayVersion" `
+            --build-number="$env:GITHUB_RUN_NUMBER" `
+            --dart-define=QWEATHER_API_KEY="$env:QWEATHER_API_KEY" `
+            --dart-define=CAIYUN_API_KEY="$env:CAIYUN_API_KEY" `
+            --dart-define=AMAP_API_KEY="$env:AMAP_API_KEY" `
+            --dart-define=AMAP_WEB_KEY="$env:AMAP_WEB_KEY" `
+            --dart-define=DEEPSEEK_API_KEY="$env:DEEPSEEK_API_KEY"
+      - name: Create MSIX installer
+        shell: pwsh
+        run: |
+          $ref = "${{ steps.version.outputs.version }}"
+          $parts = $ref -split '-'
+          $baseVersion = $parts[0]
+          $buildPart = if ($parts.Count -gt 1) { $parts[1] } else { "0" }
+          $version = "$baseVersion.$buildPart"
+          $cert = New-SelfSignedCertificate -Type Custom `
+            -Subject "CN=AuroraWeather, O=EchoRan, C=CN" `
+            -KeyUsage DigitalSignature `
+            -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3", "2.5.29.19={text}") `
+            -CertStoreLocation "Cert:\CurrentUser\My"
+          $password = ConvertTo-SecureString -String "AuroraWeather@2026" -Force -AsPlainText
+          Export-PfxCertificate -Cert $cert -FilePath "cert.pfx" -Password $password
+          dart run msix:create --build-windows=false --certificate-path=cert.pfx --certificate-password=AuroraWeather@2026 --install-certificate=false --version="$version"
+      - name: Build Inno Setup installer
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\iscc.exe"
+          if (-not (Test-Path $iscc)) { $iscc = "${env:ProgramFiles}\Inno Setup 6\iscc.exe" }
+          if (-not (Test-Path $iscc)) { throw "iscc.exe not found" }
+          $ref = "${{ steps.version.outputs.version }}"
+          $parts = $ref -split '-'
+          $baseVersion = $parts[0]
+          $buildPart = if ($parts.Count -gt 1) { $parts[1] } else { "0" }
+          $appVersion = "$baseVersion.$buildPart"
+          & $iscc scripts/setup.iss /DMyAppVersion="$appVersion" 2>&1
+          if ($LASTEXITCODE -ne 0) { throw "iscc failed with exit code $LASTEXITCODE" }
+      - name: Upload MSIX to Release
+        shell: pwsh
+        run: |
+          $tag = "${{ steps.release_tag.outputs.tag }}"
+          $ver = "${{ steps.version.outputs.version }}"
+          Get-ChildItem "build/windows/x64/runner/Release/*.msix" | ForEach-Object {
+            $newName = "build/windows/x64/runner/Release/AuroraWeather-$ver-windows-x64-installer.msix"
+            Move-Item $_.FullName $newName -Force
+            gh release upload $tag $newName --clobber
+          }
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Upload Inno Setup EXE to Release
+        shell: pwsh
+        run: |
+          $tag = "${{ steps.release_tag.outputs.tag }}"
+          Get-ChildItem "build/windows/installer/*.exe" | ForEach-Object {
+            gh release upload $tag $_.FullName --clobber
+          }
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  # ============================================================================
+  # Linux + Web Builds
+  # ============================================================================
+  build-linux-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Get version from git tag
+        id: version
+        run: |
+          TAG=$(git tag --list 'v*' --sort=-v:refname | head -n 1)
+          [[ -z "$TAG" ]] && TAG="v0.0.0"
+          echo "version=${TAG#v}" >> $GITHUB_OUTPUT
+      - name: Determine release tag
+        id: release_tag
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=dev-build-${{ github.run_number }}" >> $GITHUB_OUTPUT
+          fi
+      - name: Create release
+        run: |
+          TAG="${{ steps.release_tag.outputs.tag }}"
+          ARGS=(--title "AuroraWeather$TAG" --generate-notes)
+          [[ "${{ github.ref_type }}" != "tag" ]] && ARGS+=(--prerelease)
+          gh release create "$TAG" "${ARGS[@]}" 2>/dev/null || true
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+      - name: Install Linux build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+      - run: flutter pub get
+      - name: Generate .env
+        env:
+          QWEATHER_API_KEY: ${{ secrets.QWEATHER_API_KEY }}
+          CAIYUN_API_KEY: ${{ secrets.CAIYUN_API_KEY }}
+          AMAP_API_KEY: ${{ secrets.AMAP_API_KEY }}
+          AMAP_WEB_KEY: ${{ secrets.AMAP_WEB_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          cat > .env << EOF
+          QWEATHER_API_KEY=$QWEATHER_API_KEY
+          CAIYUN_API_KEY=$CAIYUN_API_KEY
+          AMAP_API_KEY=$AMAP_API_KEY
+          AMAP_WEB_KEY=$AMAP_WEB_KEY
+          DEEPSEEK_API_KEY=$DEEPSEEK_API_KEY
+          EOF
+      - name: Build Linux
+        env:
+          QWEATHER_API_KEY: ${{ secrets.QWEATHER_API_KEY }}
+          CAIYUN_API_KEY: ${{ secrets.CAIYUN_API_KEY }}
+          AMAP_API_KEY: ${{ secrets.AMAP_API_KEY }}
+          AMAP_WEB_KEY: ${{ secrets.AMAP_WEB_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          flutter build linux --release \
+            --build-name="${{ steps.version.outputs.version }}" \
+            --build-number="$GITHUB_RUN_NUMBER" \
+            --dart-define=QWEATHER_API_KEY="$QWEATHER_API_KEY" \
+            --dart-define=CAIYUN_API_KEY="$CAIYUN_API_KEY" \
+            --dart-define=AMAP_API_KEY="$AMAP_API_KEY" \
+            --dart-define=AMAP_WEB_KEY="$AMAP_WEB_KEY" \
+            --dart-define=DEEPSEEK_API_KEY="$DEEPSEEK_API_KEY"
+      - name: Package Linux
+        run: tar -C build/linux/x64/release -czf "build/linux/x64/release/AuroraWeather-${{ steps.version.outputs.version }}-linux-x64.tar.gz" bundle
+      - name: Build Web
+        env:
+          QWEATHER_API_KEY: ${{ secrets.QWEATHER_API_KEY }}
+          CAIYUN_API_KEY: ${{ secrets.CAIYUN_API_KEY }}
+          AMAP_API_KEY: ${{ secrets.AMAP_API_KEY }}
+          AMAP_WEB_KEY: ${{ secrets.AMAP_WEB_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          flutter build web --release \
+            --build-name="${{ steps.version.outputs.version }}" \
+            --build-number="$GITHUB_RUN_NUMBER" \
+            --dart-define=QWEATHER_API_KEY="$QWEATHER_API_KEY" \
+            --dart-define=CAIYUN_API_KEY="$CAIYUN_API_KEY" \
+            --dart-define=AMAP_API_KEY="$AMAP_API_KEY" \
+            --dart-define=AMAP_WEB_KEY="$AMAP_WEB_KEY" \
+            --dart-define=DEEPSEEK_API_KEY="$DEEPSEEK_API_KEY"
+      - name: Package Web
+        run: cd build && zip -r "AuroraWeather-${{ steps.version.outputs.version }}-web-release.zip" web
+      - name: Upload to Release
+        run: |
+          TAG="${{ steps.release_tag.outputs.tag }}"
+          gh release upload "$TAG" \
+            "build/linux/x64/release/AuroraWeather-${{ steps.version.outputs.version }}-linux-x64.tar.gz" \
+            --clobber
+          gh release upload "$TAG" \
+            "build/AuroraWeather-${{ steps.version.outputs.version }}-web-release.zip" \
+            --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  # ============================================================================
+  # Apple Builds (macOS + iOS)
+  # ============================================================================
+  build-apple:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Get version from git tag
+        id: version
+        run: |
+          TAG=$(git tag --list 'v*' --sort=-v:refname | head -n 1)
+          [[ -z "$TAG" ]] && TAG="v0.0.0"
+          echo "version=${TAG#v}" >> $GITHUB_OUTPUT
+      - name: Determine release tag
+        id: release_tag
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=dev-build-${{ github.run_number }}" >> $GITHUB_OUTPUT
+          fi
+      - name: Create release
+        run: |
+          TAG="${{ steps.release_tag.outputs.tag }}"
+          ARGS=(--title "AuroraWeather$TAG" --generate-notes)
+          [[ "${{ github.ref_type }}" != "tag" ]] && ARGS+=(--prerelease)
+          gh release create "$TAG" "${ARGS[@]}" 2>/dev/null || true
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+      - run: flutter pub get
+      - name: Generate .env
+        env:
+          QWEATHER_API_KEY: ${{ secrets.QWEATHER_API_KEY }}
+          CAIYUN_API_KEY: ${{ secrets.CAIYUN_API_KEY }}
+          AMAP_API_KEY: ${{ secrets.AMAP_API_KEY }}
+          AMAP_WEB_KEY: ${{ secrets.AMAP_WEB_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          cat > .env << EOF
+          QWEATHER_API_KEY=$QWEATHER_API_KEY
+          CAIYUN_API_KEY=$CAIYUN_API_KEY
+          AMAP_API_KEY=$AMAP_API_KEY
+          AMAP_WEB_KEY=$AMAP_WEB_KEY
+          DEEPSEEK_API_KEY=$DEEPSEEK_API_KEY
+          EOF
+      - name: Build macOS
+        env:
+          QWEATHER_API_KEY: ${{ secrets.QWEATHER_API_KEY }}
+          CAIYUN_API_KEY: ${{ secrets.CAIYUN_API_KEY }}
+          AMAP_API_KEY: ${{ secrets.AMAP_API_KEY }}
+          AMAP_WEB_KEY: ${{ secrets.AMAP_WEB_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          flutter build macos --release \
+            --build-name="${{ steps.version.outputs.version }}" \
+            --build-number="$GITHUB_RUN_NUMBER" \
+            --dart-define=QWEATHER_API_KEY="$QWEATHER_API_KEY" \
+            --dart-define=CAIYUN_API_KEY="$CAIYUN_API_KEY" \
+            --dart-define=AMAP_API_KEY="$AMAP_API_KEY" \
+            --dart-define=AMAP_WEB_KEY="$AMAP_WEB_KEY" \
+            --dart-define=DEEPSEEK_API_KEY="$DEEPSEEK_API_KEY"
+      - name: Package macOS DMG
+        run: |
+          hdiutil create -volname "AuroraWeather" \
+            -srcfolder "build/macos/Build/Products/Release/AuroraWeather.app" \
+            -ov -format UDZO \
+            "build/macos/Build/Products/Release/AuroraWeather-${{ steps.version.outputs.version }}-macos-universal.dmg"
+      - name: Build iOS
+        env:
+          QWEATHER_API_KEY: ${{ secrets.QWEATHER_API_KEY }}
+          CAIYUN_API_KEY: ${{ secrets.CAIYUN_API_KEY }}
+          AMAP_API_KEY: ${{ secrets.AMAP_API_KEY }}
+          AMAP_WEB_KEY: ${{ secrets.AMAP_WEB_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          flutter build ios --release --no-codesign \
+            --build-name="${{ steps.version.outputs.version }}" \
+            --build-number="$GITHUB_RUN_NUMBER" \
+            --dart-define=QWEATHER_API_KEY="$QWEATHER_API_KEY" \
+            --dart-define=CAIYUN_API_KEY="$CAIYUN_API_KEY" \
+            --dart-define=AMAP_API_KEY="$AMAP_API_KEY" \
+            --dart-define=AMAP_WEB_KEY="$AMAP_WEB_KEY" \
+            --dart-define=DEEPSEEK_API_KEY="$DEEPSEEK_API_KEY"
+      - name: Package IPA
+        run: |
+          cd build/ios/iphoneos
+          mkdir -p Payload
+          cp -r Runner.app Payload/
+          zip -r "AuroraWeather-${{ steps.version.outputs.version }}-ios-unsigned.ipa" Payload
+          rm -rf Payload
+      - name: Upload macOS + iOS to Release
+        run: |
+          TAG="${{ steps.release_tag.outputs.tag }}"
+          gh release upload "$TAG" \
+            "build/macos/Build/Products/Release/AuroraWeather-${{ steps.version.outputs.version }}-macos-universal.dmg" \
+            --clobber || true
+          gh release upload "$TAG" \
+            "build/ios/iphoneos/AuroraWeather-${{ steps.version.outputs.version }}-ios-unsigned.ipa" \
+            --clobber || true
+        env:
+          GH_TOKEN: ${{ github.token }}

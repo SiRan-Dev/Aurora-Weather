@@ -1,0 +1,238 @@
+import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+
+/// 应用常量类
+/// 包含应用的基本配置和常量
+class AppConstants {
+  /// 应用名称
+  static const String appName = '极光天气';
+
+  /// 应用版本号（从包信息动态获取）
+  static String _appVersion = '999.0.0';
+  static String get appVersion => _appVersion;
+
+  /// 初始化应用版本号
+  /// 在应用启动时调用，从 package_info_plus 获取实际版本号
+  static Future<void> initialize() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      _appVersion = packageInfo.version;
+    } catch (e) {
+      // 如果获取失败，使用默认版本号
+      _appVersion = '999.0.0';
+    }
+  }
+
+  /// API 请求超时时间
+  static const Duration apiTimeout = Duration(seconds: 15);
+
+  /// 缓存有效期
+  static const Duration cacheValidDuration = Duration(minutes: 30);
+
+  /// 最大城市数量
+  static const int maxCities = 10;
+
+  /// 默认动画持续时间（毫秒）
+  static const int defaultAnimationDuration = 300;
+}
+
+/// 天气代码工具类
+/// 提供天气代码的描述、图标和温度转换功能
+class WeatherCode {
+  /// 天气代码到描述的映射
+  static const Map<int, String> descriptions = {
+    100: '晴',
+    101: '多云',
+    102: '少云',
+    103: '晴间多云',
+    104: '阴',
+    150: '晴',
+    151: '多云',
+    152: '少云',
+    153: '晴间多云',
+    300: '阵雨',
+    301: '强阵雨',
+    302: '雷阵雨',
+    303: '强雷阵雨',
+    304: '雷阵雨伴有冰雹',
+    305: '小雨',
+    306: '中雨',
+    307: '大雨',
+    308: '极端降雨',
+    309: '毛毛雨',
+    310: '暴雨',
+    311: '大暴雨',
+    312: '特大暴雨',
+    313: '冻雨',
+    314: '小到中雨',
+    315: '中到大雨',
+    316: '大到暴雨',
+    317: '暴雨到大暴雨',
+    318: '大暴雨到特大暴雨',
+    399: '雨',
+    350: '阵雨',
+    351: '强阵雨',
+    400: '小雪',
+    401: '中雪',
+    402: '大雪',
+    403: '暴雪',
+    404: '雨夹雪',
+    405: '雨雪天气',
+    406: '阵雨夹雪',
+    407: '阵雪',
+    408: '小到中雪',
+    409: '中到大雪',
+    410: '大到暴雪',
+    456: '阵雨夹雪',
+    457: '阵雪',
+    499: '雪',
+    500: '薄雾',
+    501: '雾',
+    502: '霾',
+    503: '扬沙',
+    504: '浮尘',
+    507: '沙尘暴',
+    508: '强沙尘暴',
+    509: '浓雾',
+    510: '强浓雾',
+    511: '中度霾',
+    512: '重度霾',
+    513: '严重霾',
+    514: '大雾',
+    515: '特强浓雾',
+    900: '热',
+    901: '冷',
+    999: '未知',
+  };
+
+  /// 根据天气代码获取描述
+  ///
+  /// [code] 天气代码
+  /// 返回对应的天气描述，如果没有找到则返回 '未知'
+  static String getDescription(int code) {
+    return descriptions[code] ?? '未知';
+  }
+
+  /// 根据天气代码获取对应的图标
+  ///
+  /// [code] 天气代码
+  /// [isNight] 是否为夜间
+  /// 返回对应的天气图标
+  static IconData getWeatherIcon(int code, {bool isNight = false}) {
+    if (code == 100 || code == 150) {
+      return isNight ? LucideIcons.moon : LucideIcons.sun;
+    } else if (code == 101 ||
+        code == 102 ||
+        code == 103 ||
+        code == 151 ||
+        code == 152 ||
+        code == 153) {
+      return isNight ? LucideIcons.cloudMoon : LucideIcons.cloudSun;
+    } else if (code == 104) {
+      return LucideIcons.cloud;
+    } else if ((code >= 300 && code <= 399) || code == 350 || code == 351) {
+      return LucideIcons.cloudRain;
+    } else if ((code >= 400 && code <= 499) || code == 456 || code == 457) {
+      return LucideIcons.cloudSnow;
+    } else if (code >= 500 && code <= 515) {
+      return LucideIcons.cloudFog;
+    } else if (code == 900) {
+      return LucideIcons.thermometerSun;
+    } else if (code == 901) {
+      return LucideIcons.thermometerSnowflake;
+    }
+    return LucideIcons.cloud;
+  }
+
+  /// 温度单位转换
+  ///
+  /// [celsiusTemp] 摄氏度温度字符串
+  /// [toFahrenheit] 是否转换为华氏度
+  /// 返回转换后的温度字符串
+  static String convertTemperature(
+    String celsiusTemp, {
+    bool toFahrenheit = false,
+  }) {
+    final celsius = double.tryParse(celsiusTemp);
+    if (celsius == null) return celsiusTemp;
+
+    if (toFahrenheit) {
+      final fahrenheit = (celsius * 9 / 5) + 32;
+      return fahrenheit.round().toString();
+    }
+    return celsius.round().toString();
+  }
+
+  /// Returns true if [time] is at night relative to the given sunrise/sunset.
+  ///
+  /// [sunrise] and [sunset] should be in HH:MM format.
+  /// [nextSunrise] is used for future-day forecasts.
+  /// [referenceNow] provides the "today" context for future-day logic.
+  static bool isNightTime(DateTime time, {
+    String? sunrise,
+    String? sunset,
+    String? nextSunrise,
+    DateTime? referenceNow,
+  }) {
+    final sunriseMinutes = _parseTimeToMinutes(sunrise);
+    final sunsetMinutes = _parseTimeToMinutes(sunset);
+    final currentMinutes = time.hour * 60 + time.minute;
+
+    if (sunriseMinutes != null && sunsetMinutes != null) {
+      final refNow = referenceNow ?? DateTime.now();
+      final today = DateTime(refNow.year, refNow.month, refNow.day);
+      final timeDay = DateTime(time.year, time.month, time.day);
+
+      if (!timeDay.isAfter(today)) {
+        return currentMinutes < sunriseMinutes || currentMinutes >= sunsetMinutes;
+      }
+      final futureSunrise = _parseTimeToMinutes(nextSunrise) ?? sunriseMinutes;
+      if (currentMinutes < futureSunrise) return true;
+      return currentMinutes >= sunsetMinutes;
+    }
+
+    return time.hour >= 18 || time.hour < 6;
+  }
+
+  /// Parses an obsTime string (ISO with optional TZ suffix) and checks night.
+  static bool isNightTimeFromObsTime(String obsTime, {String? sunrise, String? sunset}) {
+    final time = _parseObsTime(obsTime) ?? DateTime.now();
+    return isNightTime(time, sunrise: sunrise, sunset: sunset);
+  }
+
+  static int? _parseTimeToMinutes(String? hhmm) {
+    if (hhmm == null || hhmm.isEmpty) return null;
+    final parts = hhmm.split(':');
+    if (parts.length < 2) return null;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null) return null;
+    return hour * 60 + minute;
+  }
+
+  static DateTime? _parseObsTime(String raw) {
+    final value = raw.trim();
+    if (value.isEmpty) return null;
+
+    var sanitized = value.replaceFirst(RegExp(r'[+-]\d{2}:\d{2}$'), '');
+    var parsed = DateTime.tryParse(sanitized);
+    if (parsed != null) return parsed;
+
+    final normalized = sanitized.replaceFirst(' ', 'T');
+    parsed = DateTime.tryParse(normalized);
+    if (parsed != null) return parsed.toLocal();
+
+    final tzNoColon = RegExp(r'([+-]\d{2})(\d{2})$');
+    if (tzNoColon.hasMatch(normalized)) {
+      final withColon = normalized.replaceFirstMapped(
+        tzNoColon,
+        (m) => '${m.group(1)}:${m.group(2)}',
+      );
+      parsed = DateTime.tryParse(withColon);
+      if (parsed != null) return parsed.toLocal();
+    }
+
+    return null;
+  }
+}
