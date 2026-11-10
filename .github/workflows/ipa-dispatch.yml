@@ -1,0 +1,107 @@
+name: Build iOS IPA (unsigned)
+
+# 手动触发，在 GitHub 的 macOS runner 上打出未签名 IPA 并作为 artifact 上传。
+# 密钥走 workflow_dispatch 输入，不写进仓库、也不会出现在日志里。
+
+on:
+  workflow_dispatch:
+    inputs:
+      qweather_api_key:
+        description: '和风天气 QWEATHER_API_KEY（留空则沿用 .env.example 的占位值）'
+        required: false
+        default: ''
+      caiyun_api_key:
+        description: '彩云天气 CAIYUN_API_KEY（可选，留空则占位）'
+        required: false
+        default: ''
+      amap_api_key:
+        description: '高德 AMAP_API_KEY（可选，代码未引用，可留空）'
+        required: false
+        default: ''
+      amap_web_key:
+        description: '高德 AMAP_WEB_KEY（Web服务 key，定位/城市搜索用）'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  ios-ipa:
+    name: Build unsigned IPA
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      # .env 是 pubspec 里声明的 asset，构建前必须存在。
+      # 输入的密钥通过 env 传入，脚本里只用变量名，避免值出现在日志中。
+      - name: Create .env
+        env:
+          IN_QWEATHER: ${{ inputs.qweather_api_key }}
+          IN_CAIYUN: ${{ inputs.caiyun_api_key }}
+          IN_AMAP: ${{ inputs.amap_api_key }}
+          IN_AMAP_WEB: ${{ inputs.amap_web_key }}
+        run: |
+          set -euo pipefail
+          if [ -f .env ]; then
+            echo "using existing .env"
+          else
+            cp .env.example .env
+          fi
+
+          set_key() {
+            key="$1"
+            val="$2"
+            if [ -z "$val" ]; then
+              return 0
+            fi
+            grep -v "^${key}=" .env > .env.tmp || true
+            printf '%s=%s\n' "$key" "$val" >> .env.tmp
+            mv .env.tmp .env
+          }
+
+          set_key QWEATHER_API_KEY "$IN_QWEATHER"
+          set_key CAIYUN_API_KEY "$IN_CAIYUN"
+          set_key AMAP_API_KEY "$IN_AMAP"
+          set_key AMAP_WEB_KEY "$IN_AMAP_WEB"
+
+          echo "--- .env 概况（值已隐藏）---"
+          sed -E 's/^([A-Za-z_]+)=.*/\1=<set>/' .env
+          echo "QWeather key supplied: $([ -n "$IN_QWEATHER" ] && echo yes || echo no)"
+          echo "Amap web key supplied: $([ -n "$IN_AMAP_WEB" ] && echo yes || echo no)"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.3'
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generate code
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Build iOS (no codesign)
+        run: flutter build ios --release --no-codesign
+
+      - name: Package IPA
+        run: |
+          set -euo pipefail
+          APP_DIR="build/ios/iphoneos"
+          rm -rf "$APP_DIR/Payload"
+          mkdir -p "$APP_DIR/Payload"
+          cp -R "$APP_DIR/Runner.app" "$APP_DIR/Payload/"
+          VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP_DIR/Runner.app/Info.plist")
+          cd "$APP_DIR"
+          zip -qry "$GITHUB_WORKSPACE/AuroraWeather-${VERSION}-unsigned.ipa" Payload
+          ls -lh "$GITHUB_WORKSPACE/AuroraWeather-${VERSION}-unsigned.ipa"
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: AuroraWeather-ipa
+          path: AuroraWeather-*-unsigned.ipa
+          retention-days: 7
