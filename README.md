@@ -61,13 +61,17 @@ flutter pub get
 
 ```env
 QWEATHER_API_KEY=你的和风天气API密钥
+QWEATHER_BASE_URL=https://xxxx.qweatherapi.com/v7
 CAIYUN_API_KEY=你的彩云天气API密钥
-AMAP_API_KEY=你的高德地图API密钥
-AMAP_WEB_KEY=你的高德Web端API密钥
+AMAP_WEB_KEY=你的高德Web服务Key
 DEEPSEEK_API_KEY=你的DeepSeek API密钥
 ```
 
-> **提示**：API 密钥也可以通过 `--dart-define` 或环境变量传入，详见 [API 配置](/lib/core/constants/api_config.dart)。
+> `QWEATHER_BASE_URL` 填和风天气控制台里你的专属 API Host（形如 `https://xxxx.qweatherapi.com/v7`）；老账号可以留空，默认使用 `https://devapi.qweather.com/v7`。
+>
+> 高德只使用「Web服务」类型的 Key（`AMAP_WEB_KEY`，用于定位和城市搜索），项目没有集成高德原生 SDK，不需要 Android/iOS Key。
+>
+> **提示**：API 密钥也可以通过 `--dart-define` 或环境变量传入，详见 [API 配置](lib/core/constants/api_config.dart)。
 
 ### 运行
 

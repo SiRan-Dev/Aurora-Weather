@@ -42,9 +42,6 @@
         <receiver
             android:name=".LiveUpdateAlarmReceiver"
             android:exported="false" />
-        <meta-data
-            android:name="com.amap.api.v2.apikey"
-            android:value="YOUR_AMAP_API_KEY"/>
     </application>
     <queries>
         <intent>
