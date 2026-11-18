@@ -17,6 +17,27 @@ class ApiConfig {
     }
   }
 
+  static const _defaultQWeatherBaseUrl = 'https://devapi.qweather.com/v7';
+  static const _defaultCaiyunBaseUrl = 'https://api.caiyunapp.com/v2.6';
+
+  /// Accepts a full base URL or the bare API host shown in the console
+  /// (for example `xxxx.qweatherapi.com`) and fills in the missing scheme
+  /// and default API path.
+  static String _normalizeBaseUrl(
+    String raw,
+    String defaultPath,
+    String fallback,
+  ) {
+    var value = raw.trim();
+    if (value.isEmpty) return fallback;
+    if (!value.contains('://')) value = 'https://$value';
+    value = value.replaceFirst(RegExp(r'/+$'), '');
+    final uri = Uri.tryParse(value);
+    if (uri == null || uri.host.isEmpty) return fallback;
+    if (uri.path.isEmpty) value = '$value$defaultPath';
+    return value;
+  }
+
   static String get qweatherApiKey {
     const fromDefine = String.fromEnvironment(
       'QWEATHER_API_KEY',
@@ -33,11 +54,17 @@ class ApiConfig {
       'QWEATHER_BASE_URL',
       defaultValue: '',
     );
-    if (fromDefine.isNotEmpty) return fromDefine;
+    if (fromDefine.isNotEmpty) {
+      return _normalizeBaseUrl(
+        fromDefine,
+        '/v7',
+        _defaultQWeatherBaseUrl,
+      );
+    }
     final fromDotenv = dotenv.env['QWEATHER_BASE_URL'] ?? '';
     return fromDotenv.isNotEmpty
-        ? fromDotenv
-        : 'https://devapi.qweather.com/v7';
+        ? _normalizeBaseUrl(fromDotenv, '/v7', _defaultQWeatherBaseUrl)
+        : _defaultQWeatherBaseUrl;
   }
 
   static String get caiyunApiKey {
@@ -56,11 +83,17 @@ class ApiConfig {
       'CAIYUN_BASE_URL',
       defaultValue: '',
     );
-    if (fromDefine.isNotEmpty) return fromDefine;
+    if (fromDefine.isNotEmpty) {
+      return _normalizeBaseUrl(
+        fromDefine,
+        '/v2.6',
+        _defaultCaiyunBaseUrl,
+      );
+    }
     final fromDotenv = dotenv.env['CAIYUN_BASE_URL'] ?? '';
     return fromDotenv.isNotEmpty
-        ? fromDotenv
-        : 'https://api.caiyunapp.com/v2.6';
+        ? _normalizeBaseUrl(fromDotenv, '/v2.6', _defaultCaiyunBaseUrl)
+        : _defaultCaiyunBaseUrl;
   }
 
   static String get amapApiKey {
