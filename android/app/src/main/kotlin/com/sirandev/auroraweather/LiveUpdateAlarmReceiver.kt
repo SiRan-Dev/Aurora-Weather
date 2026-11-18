@@ -1,4 +1,4 @@
-package com.echoran.pureweather
+package com.sirandev.auroraweather
 
 import android.Manifest
 import android.app.Notification

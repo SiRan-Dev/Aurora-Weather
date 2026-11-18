@@ -1,4 +1,4 @@
-package com.echoran.pureweather
+package com.sirandev.auroraweather
 
 import android.Manifest
 import android.app.AlarmManager
@@ -21,8 +21,8 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     companion object {
-        private const val wallpaperChannelName = "com.echoran.pureweather/wallpaper"
-        private const val liveUpdateChannelName = "com.echoran.pureweather/live_update"
+        private const val wallpaperChannelName = "com.sirandev.auroraweather/wallpaper"
+        private const val liveUpdateChannelName = "com.sirandev.auroraweather/live_update"
         private const val liveUpdateNotificationChannelId = "weather_live_updates"
         private const val liveUpdateNotificationId = 9001
         private const val android16ApiLevel = 36
