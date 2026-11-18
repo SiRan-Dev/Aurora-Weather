@@ -2,28 +2,22 @@
   "name": "aurora-weather",
   "version": "1.0.0",
   "description": "极光天气 - Aurora Weather",
-  "main": "index.js",
-  "directories": {
-    "doc": "docs",
-    "lib": "lib",
-    "test": "test"
-  },
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "generate:ios-icons": "node scripts/generate_ios_icons.js"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/EchoRan6319/Aurora-Weather.git"
+    "url": "git+https://github.com/SiRan-Dev/Aurora-Weather.git"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "type": "commonjs",
   "bugs": {
-    "url": "https://github.com/EchoRan6319/Aurora-Weather/issues"
+    "url": "https://github.com/SiRan-Dev/Aurora-Weather/issues"
   },
-  "homepage": "https://github.com/EchoRan6319/Aurora-Weather#readme",
-  "dependencies": {
+  "homepage": "https://github.com/SiRan-Dev/Aurora-Weather#readme",
+  "devDependencies": {
     "sharp": "^0.34.5"
   }
 }

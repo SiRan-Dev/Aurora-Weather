@@ -34,7 +34,7 @@
 | iOS | IPA（未签名） | ✅ |
 | Web | ZIP | ✅ |
 
-> 所有平台构建产物均由 GitHub Actions 自动发布到 [Releases](https://github.com/EchoRan6319/PureWeather/releases)。 
+> 所有平台构建产物均由 GitHub Actions 自动发布到 [Releases](https://github.com/SiRan-Dev/Aurora-Weather/releases)。
 
 ---
 
@@ -44,11 +44,12 @@
 
 - Flutter SDK >= 3.41
 - VS Code
+- Node.js 18+（仅生成 iOS 图标时需要）
 
 ```bash
 # 克隆项目
-git clone https://github.com/EchoRan6319/PureWeather.git
-cd PureWeather
+git clone https://github.com/SiRan-Dev/Aurora-Weather.git
+cd Aurora-Weather
 
 # 获取依赖
 flutter pub get
@@ -114,6 +115,17 @@ flutter build ios --release --no-codesign
 # Web
 flutter build web --release
 ```
+
+### 生成 iOS 图标
+
+iOS 的 `AppIcon.appiconset` 统一由 1024×1024 主图生成（需要 Node.js）：
+
+```bash
+npm install
+npm run generate:ios-icons
+```
+
+主图默认为 `assets/icons/app_icon_1024.png`，也可以传入其他 1024×1024 PNG 路径。
 
 ### CI 自动构建（推荐）
 
