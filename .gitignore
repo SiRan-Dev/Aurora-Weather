@@ -58,6 +58,7 @@ migrate_working_dir/
 
 # Signing / releases
 /PureWaether
+/PureWaether.base64
 *.pfx
 
 # Local configuration
