@@ -1,0 +1,45 @@
+{
+  "name": "极光天气",
+  "identifier": "com.sirandev.auroraweather.source",
+  "subtitle": "Aurora Weather",
+  "description": "极光天气（Aurora Weather）是一款使用 Aurora UI 构建的跨平台天气应用，支持天气驱动的动态极光背景、多城市管理、天气预警与 AI 天气助手。\n\n本软件源提供 iOS 未签名 IPA，供 SideStore / AltStore 使用你自己的证书签名安装；其他平台请前往 GitHub Releases 下载。",
+  "iconURL": "https://raw.githubusercontent.com/SiRan-Dev/Aurora-Weather/main/assets/icons/app_icon_1024.png",
+  "website": "https://github.com/SiRan-Dev/Aurora-Weather",
+  "tintColor": "#60A5FA",
+  "featuredApps": [
+    "com.sirandev.auroraweather"
+  ],
+  "apps": [
+    {
+      "name": "极光天气",
+      "bundleIdentifier": "com.sirandev.auroraweather",
+      "developerName": "Siran-Dev",
+      "subtitle": "Aurora UI 跨平台天气应用",
+      "localizedDescription": "极光天气（Aurora Weather）是一款使用 Aurora UI 构建的现代化天气应用：\n\n• 和风天气 + 彩云天气数据\n• 天气驱动的动态极光背景\n• 24 小时 / 7 日预报、空气质量、生活指数与天气预警\n• 多城市管理与自动定位\n• 可选 AI 天气助手\n• 定时天气播报\n\n本 IPA 未签名，需要通过 SideStore / AltStore 自签安装。",
+      "iconURL": "https://raw.githubusercontent.com/SiRan-Dev/Aurora-Weather/main/assets/icons/app_icon_1024.png",
+      "tintColor": "#60A5FA",
+      "category": "lifestyle",
+      "screenshots": [
+        "https://raw.githubusercontent.com/SiRan-Dev/Aurora-Weather/main/App_Screenshot.jpg"
+      ],
+      "versions": [
+        {
+          "version": "7.0.0",
+          "buildVersion": "2",
+          "date": "2026-11-18T17:34:15Z",
+          "downloadURL": "https://github.com/SiRan-Dev/Aurora-Weather/releases/download/v7.0.0/AuroraWeather-7.0.0-ios-unsigned.ipa",
+          "size": 11060380,
+          "minOSVersion": "13.0",
+          "localizedDescription": "应用身份迁移至 com.sirandev.auroraweather。这是一次不兼容升级，旧版本无法覆盖安装，本地设置也不会自动迁移。"
+        }
+      ],
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {
+          "NSLocationWhenInUseUsageDescription": "极光天气需要访问您的位置，以便获取当前位置的天气信息和天气预警。"
+        }
+      }
+    }
+  ],
+  "news": []
+}
