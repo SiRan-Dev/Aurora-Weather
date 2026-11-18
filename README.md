@@ -228,4 +228,4 @@ lib/
 
 ## 开源协议
 
-[MIT](LICENSE) © EchoRan
+[MIT](LICENSE) © Siran-Dev
