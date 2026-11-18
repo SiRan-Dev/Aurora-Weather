@@ -35,7 +35,7 @@ class NotificationService {
 
   /// Android 实时更新通知 MethodChannel
   static const MethodChannel _liveUpdateChannel = MethodChannel(
-    'com.echoran.pureweather/live_update',
+    'com.sirandev.auroraweather/live_update',
   );
 
   /// 是否已初始化

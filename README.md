@@ -35,6 +35,8 @@
 | Web | ZIP | ✅ |
 
 > 所有平台构建产物均由 GitHub Actions 自动发布到 [Releases](https://github.com/SiRan-Dev/Aurora-Weather/releases)。
+>
+> **7.0.0 应用身份变更**：应用 ID 已迁移为 `com.sirandev.auroraweather`。这是一次不兼容升级：iOS/SideStore、Android 和 Windows MSIX 会将其视为新应用，无法覆盖安装，旧版本的本地设置也不会自动迁移。
 
 ---
 

@@ -2,7 +2,7 @@ name: pureweather
 description: "极光天气 - 一款使用 Aurora UI 的天气应用"
 publish_to: 'none'
 
-version: 6.0.5+82
+version: 7.0.0+83
 
 environment:
   sdk: ^3.9.0
@@ -45,7 +45,7 @@ flutter:
 msix_config:
   display_name: 极光天气
   publisher_display_name: Siran-Dev
-  identity_name: com.echoran.pureweather
+  identity_name: com.sirandev.auroraweather
   logo_path: assets/icons/app_icon.png
   architecture: x64
   capabilities: internetClient, location
