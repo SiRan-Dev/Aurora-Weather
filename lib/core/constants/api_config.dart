@@ -34,9 +34,10 @@ class ApiConfig {
       defaultValue: '',
     );
     if (fromDefine.isNotEmpty) return fromDefine;
-    return _fromEnv('QWEATHER_BASE_URL').isNotEmpty
-        ? _fromEnv('QWEATHER_BASE_URL')
-        : dotenv.env['QWEATHER_BASE_URL'] ?? 'https://devapi.qweather.com/v7';
+    final fromDotenv = dotenv.env['QWEATHER_BASE_URL'] ?? '';
+    return fromDotenv.isNotEmpty
+        ? fromDotenv
+        : 'https://devapi.qweather.com/v7';
   }
 
   static String get caiyunApiKey {
@@ -56,9 +57,10 @@ class ApiConfig {
       defaultValue: '',
     );
     if (fromDefine.isNotEmpty) return fromDefine;
-    return _fromEnv('CAIYUN_BASE_URL').isNotEmpty
-        ? _fromEnv('CAIYUN_BASE_URL')
-        : dotenv.env['CAIYUN_BASE_URL'] ?? 'https://api.caiyunapp.com/v2.6';
+    final fromDotenv = dotenv.env['CAIYUN_BASE_URL'] ?? '';
+    return fromDotenv.isNotEmpty
+        ? fromDotenv
+        : 'https://api.caiyunapp.com/v2.6';
   }
 
   static String get amapApiKey {

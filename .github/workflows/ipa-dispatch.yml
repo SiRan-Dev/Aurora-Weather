@@ -1,25 +1,30 @@
 name: Build iOS IPA (unsigned)
 
 # 手动触发，在 GitHub 的 macOS runner 上打出未签名 IPA 并作为 artifact 上传。
-# 密钥走 workflow_dispatch 输入，不写进仓库、也不会出现在日志里。
+# 默认从仓库 Secrets 读取密钥（Settings → Secrets and variables → Actions）；
+# workflow_dispatch 的输入只用于临时覆盖，会出现在运行记录里，不建议填长期密钥。
 
 on:
   workflow_dispatch:
     inputs:
       qweather_api_key:
-        description: '和风天气 QWEATHER_API_KEY（留空则沿用 .env.example 的占位值）'
+        description: '可选：临时覆盖 Secret QWEATHER_API_KEY'
+        required: false
+        default: ''
+      qweather_base_url:
+        description: '可选：临时覆盖 Secret QWEATHER_BASE_URL（形如 https://xxxx.qweatherapi.com/v7）'
         required: false
         default: ''
       caiyun_api_key:
-        description: '彩云天气 CAIYUN_API_KEY（可选，留空则占位）'
+        description: '可选：临时覆盖 Secret CAIYUN_API_KEY'
         required: false
         default: ''
       amap_api_key:
-        description: '高德 AMAP_API_KEY（可选，代码未引用，可留空）'
+        description: '可选：临时覆盖 Secret AMAP_API_KEY（代码未引用）'
         required: false
         default: ''
       amap_web_key:
-        description: '高德 AMAP_WEB_KEY（Web服务 key，定位/城市搜索用）'
+        description: '可选：临时覆盖 Secret AMAP_WEB_KEY（Web服务 key，定位/城市搜索用）'
         required: false
         default: ''
 
@@ -38,10 +43,11 @@ jobs:
       # 输入的密钥通过 env 传入，脚本里只用变量名，避免值出现在日志中。
       - name: Create .env
         env:
-          IN_QWEATHER: ${{ inputs.qweather_api_key }}
-          IN_CAIYUN: ${{ inputs.caiyun_api_key }}
-          IN_AMAP: ${{ inputs.amap_api_key }}
-          IN_AMAP_WEB: ${{ inputs.amap_web_key }}
+          IN_QWEATHER: ${{ inputs.qweather_api_key || secrets.QWEATHER_API_KEY }}
+          IN_QWEATHER_BASE: ${{ inputs.qweather_base_url || secrets.QWEATHER_BASE_URL }}
+          IN_CAIYUN: ${{ inputs.caiyun_api_key || secrets.CAIYUN_API_KEY }}
+          IN_AMAP: ${{ inputs.amap_api_key || secrets.AMAP_API_KEY }}
+          IN_AMAP_WEB: ${{ inputs.amap_web_key || secrets.AMAP_WEB_KEY }}
         run: |
           set -euo pipefail
           if [ -f .env ]; then
@@ -62,6 +68,7 @@ jobs:
           }
 
           set_key QWEATHER_API_KEY "$IN_QWEATHER"
+          set_key QWEATHER_BASE_URL "$IN_QWEATHER_BASE"
           set_key CAIYUN_API_KEY "$IN_CAIYUN"
           set_key AMAP_API_KEY "$IN_AMAP"
           set_key AMAP_WEB_KEY "$IN_AMAP_WEB"
@@ -69,7 +76,15 @@ jobs:
           echo "--- .env 概况（值已隐藏）---"
           sed -E 's/^([A-Za-z_]+)=.*/\1=<set>/' .env
           echo "QWeather key supplied: $([ -n "$IN_QWEATHER" ] && echo yes || echo no)"
+          echo "QWeather host supplied: $([ -n "$IN_QWEATHER_BASE" ] && echo yes || echo no)"
           echo "Amap web key supplied: $([ -n "$IN_AMAP_WEB" ] && echo yes || echo no)"
+
+          if grep -q '^QWEATHER_API_KEY=your_' .env; then
+            echo "::warning::QWEATHER_API_KEY 未配置（Secrets 或输入为空），天气接口会返回 403"
+          fi
+          if grep -q '^AMAP_WEB_KEY=your_' .env; then
+            echo "::warning::AMAP_WEB_KEY 未配置，定位和城市搜索会失败"
+          fi
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
