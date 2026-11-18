@@ -2,7 +2,7 @@
 ; Usage: iscc /DMyAppVersion=1.0.0 scripts/setup.iss
 
 #define MyAppName "极光天气"
-#define MyAppPublisher "EchoRan"
+#define MyAppPublisher "Siran-Dev"
 #define MyAppExeName "pureweather.exe"
 
 [Setup]

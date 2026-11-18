@@ -11,4 +11,4 @@ PRODUCT_NAME = AuroraWeather
 PRODUCT_BUNDLE_IDENTIFIER = com.echoran.pureweather
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 com.echoran. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 Siran-Dev. All rights reserved.

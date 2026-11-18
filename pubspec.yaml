@@ -44,7 +44,7 @@ flutter:
 
 msix_config:
   display_name: 极光天气
-  publisher_display_name: EchoRan
+  publisher_display_name: Siran-Dev
   identity_name: com.echoran.pureweather
   logo_path: assets/icons/app_icon.png
   architecture: x64
