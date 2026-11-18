@@ -149,6 +149,20 @@ git push origin v5.4.1-1
 | iOS | `AuroraWeather-{version}-ios-unsigned.ipa` |
 | Web | `AuroraWeather-{version}-web-release.zip` |
 
+### GitHub Actions Secrets
+
+在仓库 **Settings → Secrets and variables → Actions** 中配置以下 Secrets，`build-and-release.yml` 和 `ipa-dispatch.yml` 会自动读取：
+
+| 名称 | 必需 | 说明 |
+|------|------|------|
+| `QWEATHER_API_KEY` | 是 | 和风天气 **Web API** key |
+| `QWEATHER_BASE_URL` | 新账号需要 | 和风天气专属 API Host，形如 `https://xxxx.qweatherapi.com/v7` |
+| `AMAP_WEB_KEY` | 是 | 高德 **Web服务** key（定位、城市搜索） |
+| `CAIYUN_API_KEY` | 否 | 彩云天气分钟级降水 |
+| `DEEPSEEK_API_KEY` | 否 | AI 天气助手 |
+
+`ipa-dispatch` 手动触发时仍可临时填写输入覆盖 Secrets，但这些输入会出现在运行记录中，不建议填写长期密钥。
+
 ---
 
 ## 项目结构
