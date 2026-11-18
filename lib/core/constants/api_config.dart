@@ -63,23 +63,11 @@ class ApiConfig {
         : 'https://api.caiyunapp.com/v2.6';
   }
 
-  static String get amapApiKey {
-    const fromDefine = String.fromEnvironment('AMAP_API_KEY', defaultValue: '');
-    if (fromDefine.isNotEmpty) return fromDefine;
-    return _fromEnv('AMAP_API_KEY').isNotEmpty
-        ? _fromEnv('AMAP_API_KEY')
-        : dotenv.env['AMAP_API_KEY'] ?? '';
-  }
-
   static String get amapWebKey {
     const fromDefine = String.fromEnvironment('AMAP_WEB_KEY', defaultValue: '');
     if (fromDefine.isNotEmpty) return fromDefine;
     return _fromEnv('AMAP_WEB_KEY').isNotEmpty
         ? _fromEnv('AMAP_WEB_KEY')
         : dotenv.env['AMAP_WEB_KEY'] ?? '';
-  }
-
-  static bool get isConfigured {
-    return qweatherApiKey.isNotEmpty && amapApiKey.isNotEmpty;
   }
 }
