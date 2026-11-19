@@ -35,7 +35,7 @@ class AuroraGlassButton extends StatelessWidget {
     this.expanded = false,
     this.width,
     this.height = 48,
-    this.quality = GlassQuality.standard,
+    this.quality = GlassQuality.premium,
   });
 
   @override

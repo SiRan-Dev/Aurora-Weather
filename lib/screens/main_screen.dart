@@ -248,25 +248,30 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       child: Scaffold(
         extendBody: false,
         body: IndexedStack(index: _currentIndex, children: screens),
-        bottomNavigationBar: SafeArea(
-          top: false,
-          minimum: const EdgeInsets.fromLTRB(24, 0, 24, 12),
-          child: Center(
-            heightFactor: 1,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520),
-              child: GlassTabBar.bottom(
-                tabs: tabs,
-                selectedIndex: _currentIndex,
-                horizontalPadding: 0,
-                verticalPadding: 0,
-                barHeight: 60,
-                barBorderRadius: 30,
-                onTabSelected: (index) {
-                  setState(() {
-                    _currentIndex = index;
-                  });
-                },
+        bottomNavigationBar: Padding(
+          // Keep breathing room above the floating pill for its glow/shadow,
+          // so page cards are not cut flush against the bar.
+          padding: const EdgeInsets.only(top: 20),
+          child: SafeArea(
+            top: false,
+            minimum: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+            child: Center(
+              heightFactor: 1,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 520),
+                child: GlassTabBar.bottom(
+                  tabs: tabs,
+                  selectedIndex: _currentIndex,
+                  horizontalPadding: 0,
+                  verticalPadding: 0,
+                  barHeight: 60,
+                  barBorderRadius: 30,
+                  onTabSelected: (index) {
+                    setState(() {
+                      _currentIndex = index;
+                    });
+                  },
+                ),
               ),
             ),
           ),

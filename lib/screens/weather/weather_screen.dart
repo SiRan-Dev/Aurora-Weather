@@ -220,7 +220,9 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
                     child: AuroraGlassIconButton(
                       icon: LucideIcons.navigation,
                       color: mutedForegroundColor,
-                      iconSize: 20,
+                      size: 44,
+                      iconSize: 22,
+                      preferOwnLayer: true,
                       onPressed: _showCitySelector,
                       tooltip: context.tr('导航'),
                     ),
@@ -463,6 +465,9 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
       onPressed: _showCitySelector,
       tooltip: context.tr('导航'),
       icon: LucideIcons.navigation,
+      size: 44,
+      iconSize: 22,
+      preferOwnLayer: true,
     );
   }
 

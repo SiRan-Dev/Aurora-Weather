@@ -24,6 +24,12 @@ class AuroraGlassIconButton extends StatelessWidget {
   /// 玻璃渲染质量
   final GlassQuality quality;
 
+  /// 是否强制使用独立玻璃层。
+  ///
+  /// 页面级玻璃层默认以 standard 质量渲染，独立层才能让 premium
+  /// 反射/高光完整生效，用于需要突出质感的独立按钮。
+  final bool preferOwnLayer;
+
   const AuroraGlassIconButton({
     super.key,
     required this.icon,
@@ -32,7 +38,8 @@ class AuroraGlassIconButton extends StatelessWidget {
     this.size = 40,
     this.iconSize,
     this.color,
-    this.quality = GlassQuality.standard,
+    this.quality = GlassQuality.premium,
+    this.preferOwnLayer = false,
   });
 
   @override
@@ -44,7 +51,7 @@ class AuroraGlassIconButton extends StatelessWidget {
       onPressed: onPressed,
       size: size,
       quality: quality,
-      useOwnLayer: !hasGlassScope,
+      useOwnLayer: preferOwnLayer || !hasGlassScope,
       semanticLabel: tooltip,
     );
 
