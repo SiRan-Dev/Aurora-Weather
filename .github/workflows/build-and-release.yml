@@ -15,8 +15,10 @@ env:
 
 jobs:
   # ============================================================================
-  # Android Builds (arm64 release + arm64 debug)
+  # Android Build (arm64 AOT release only)
   # ============================================================================
+  # 只出 release：debug 版本用 JIT，低端机上明显卡顿，普通用户也分不清
+  # debug/release，容易误装后反馈"很卡"。
   build-android:
     runs-on: ubuntu-latest
     strategy:
@@ -27,10 +29,6 @@ jobs:
             mode_flag: --release
             apk_file: app-release.apk
             output_suffix: android-release
-          - mode: debug
-            mode_flag: --debug
-            apk_file: app-debug.apk
-            output_suffix: android-debug
     steps:
       - name: Checkout code
         uses: actions/checkout@v4.2.2
