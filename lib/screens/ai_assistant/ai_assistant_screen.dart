@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'dart:ui';
 import '../../app_localizations.dart';
 import '../../services/deepseek_service.dart';
@@ -10,7 +12,10 @@ import '../../providers/settings_provider.dart';
 import '../../providers/weather_provider.dart';
 import '../../providers/city_provider.dart';
 import '../../models/weather_models.dart';
+import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_theme.dart';
+import '../../widgets/glass/aurora_glass_card.dart';
+import '../../widgets/glass/aurora_glass_icon_button.dart';
 
 /// 天气助手屏幕
 class AIAssistantScreen extends ConsumerStatefulWidget {
@@ -253,11 +258,26 @@ class _AIAssistantScreenState extends ConsumerState<AIAssistantScreen> {
     final weatherCode = weatherState.weatherData != null
         ? int.tryParse(weatherState.weatherData!.current.icon) ?? 100
         : null;
-    final weatherContrast = context.weatherContrastColorsFor(weatherCode);
+    final weatherContrast = context.weatherContrastColorsFor(
+      weatherCode,
+      useWeatherContrast: aiSettings.auroraBackgroundEnabled,
+    );
     final isAiConfigured =
         aiSettings.aiApiKey.trim().isNotEmpty &&
         aiSettings.aiBaseUrl.trim().isNotEmpty &&
         aiSettings.aiModel.trim().isNotEmpty;
+
+    // 悬浮底栏的左右留白取“安全区或 24 中的较大值”。输入框位于页面级
+    // SafeArea 内部，横向安全区已经被扣除，这里只补足差额，保证输入框
+    // 和底栏在任何屏幕、任何方向下宽度都完全一致。
+    final mediaPadding = MediaQuery.paddingOf(context);
+    final inputHorizontalInset = EdgeInsets.only(
+      left: math.max(0.0, kFloatingTabBarHorizontalMargin - mediaPadding.left),
+      right: math.max(
+        0.0,
+        kFloatingTabBarHorizontalMargin - mediaPadding.right,
+      ),
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -271,8 +291,10 @@ class _AIAssistantScreenState extends ConsumerState<AIAssistantScreen> {
         ),
         actions: [
           if (chatSession.messages.isNotEmpty)
-            IconButton(
-              icon: const Icon(LucideIcons.trash2),
+            AuroraGlassIconButton(
+              icon: LucideIcons.trash2,
+              color: weatherContrast.foreground,
+              iconSize: 20,
               onPressed: () {
                 ref.read(chatProvider.notifier).clearHistory();
               },
@@ -315,7 +337,7 @@ class _AIAssistantScreenState extends ConsumerState<AIAssistantScreen> {
                           ),
                         ),
                         if (_isTyping) _buildTypingIndicator(),
-                        _buildInputArea(isAiConfigured),
+                        _buildInputArea(isAiConfigured, inputHorizontalInset),
                       ],
                     ),
                   ),
@@ -436,14 +458,12 @@ class _AIAssistantScreenState extends ConsumerState<AIAssistantScreen> {
 
   /// 构建输入指示器
   Widget _buildTypingIndicator() {
-    return Container(
+    return AuroraGlassCard(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: context.uiTokens.cardBackground,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: context.uiTokens.cardBorder),
-      ),
+      borderRadius: 14,
+      // 与输入框保持一致的高级玻璃质感，避免在浅色背景上退化成灰色矩形。
+      quality: GlassQuality.premium,
       child: Row(
         children: [
           Container(
@@ -472,57 +492,84 @@ class _AIAssistantScreenState extends ConsumerState<AIAssistantScreen> {
   }
 
   /// 构建输入区域
-  Widget _buildInputArea(bool isAiConfigured) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-      decoration: BoxDecoration(
-        color: context.uiTokens.cardBackground,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: context.uiTokens.cardBorder),
+  ///
+  /// [horizontalInset] 是扣除横向安全区后仍需补足的左右留白，
+  /// 用来让输入框与悬浮底栏等宽。
+  Widget _buildInputArea(bool isAiConfigured, EdgeInsets horizontalInset) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final bool canSend = !_isTyping && isAiConfigured;
+
+    return Padding(
+      // 水平留白与悬浮底栏保持一致，两者宽度和位置完全对齐。
+      // 主页面 `extendBody: true` 时，Scaffold 已经通过 body 的
+      // MediaQuery 把这里 SafeArea 的底部内边距抬到了底栏上沿，
+      // 因此只需再补一个间距，让输入框不要贴着底栏。
+      padding: EdgeInsets.fromLTRB(
+        horizontalInset.left,
+        0,
+        horizontalInset.right,
+        kFloatingTabBarContentGap,
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _messageController,
-              focusNode: _focusNode,
-              decoration: InputDecoration(
-                hintText: context.tr(isAiConfigured ? '输入消息...' : '请先完成 AI 设置'),
-                filled: true,
-                fillColor: Theme.of(context).colorScheme.surface,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide.none,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide(color: context.uiTokens.cardBorder),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide(
-                    color: context.uiTokens.selectedBorder,
+      child: Center(
+        heightFactor: 1,
+        child: ConstrainedBox(
+          // 与 MainScreen 中悬浮底栏相同的最大宽度，宽屏上也对齐。
+          constraints: const BoxConstraints(maxWidth: kFloatingTabBarMaxWidth),
+          // 输入框和发送按钮合成一整块玻璃胶囊，避免浅色背景上出现
+          // 一块平铺的矩形底色，和底栏保持同一套 Liquid Glass 质感。
+          child: AuroraGlassCard(
+            borderRadius: 26,
+            padding: const EdgeInsets.fromLTRB(16, 2, 4, 2),
+            quality: GlassQuality.premium,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _messageController,
+                    focusNode: _focusNode,
+                    decoration: InputDecoration(
+                      hintText: context.tr(
+                        isAiConfigured ? '输入消息...' : '请先完成 AI 设置',
+                      ),
+                      // 主题里的 InputDecorationTheme 默认会给输入框铺一层
+                      // 灰色填充和 12px 圆角，这里必须关掉，否则玻璃胶囊
+                      // 内部会再出现一块矩形底色。
+                      filled: false,
+                      fillColor: Colors.transparent,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 12,
+                      ),
+                    ),
+                    maxLines: null,
+                    enabled: isAiConfigured,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => _sendMessage(),
                   ),
                 ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
+                SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: IconButton(
+                    icon: const Icon(LucideIcons.send, size: 20),
+                    color: colorScheme.primary,
+                    disabledColor: colorScheme.onSurfaceVariant.withValues(
+                      alpha: 0.4,
+                    ),
+                    tooltip: context.tr('发送'),
+                    padding: EdgeInsets.zero,
+                    onPressed: canSend ? _sendMessage : null,
+                  ),
                 ),
-              ),
-              maxLines: null,
-              enabled: isAiConfigured,
-              textInputAction: TextInputAction.send,
-              onSubmitted: (_) => _sendMessage(),
+              ],
             ),
           ),
-          const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(LucideIcons.send),
-            tooltip: context.tr('发送'),
-            onPressed: _isTyping || !isAiConfigured ? null : _sendMessage,
-          ),
-        ],
+        ),
       ),
     );
   }

@@ -29,11 +29,15 @@ class SettingsScreen extends ConsumerWidget {
     final weatherCode = weatherState.weatherData != null
         ? int.tryParse(weatherState.weatherData!.current.icon) ?? 100
         : null;
-    final weatherContrast = context.weatherContrastColorsFor(weatherCode);
+    final weatherContrast = context.weatherContrastColorsFor(
+      weatherCode,
+      useWeatherContrast: appSettings.auroraBackgroundEnabled,
+    );
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final bool isWide = constraints.maxWidth > 900;
+        final bottomInset = floatingTabBarScrollInset(context);
 
         final scaffoldBody = ScrollConfiguration(
           behavior: ScrollConfiguration.of(context).copyWith(
@@ -55,10 +59,7 @@ class SettingsScreen extends ConsumerWidget {
                       maxWidth: isWide ? 900 : double.infinity,
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
+                      padding: EdgeInsets.fromLTRB(16, 8, 16, bottomInset),
                       child: Column(
                         children: [
                           // 个性化设置组
@@ -79,6 +80,17 @@ class SettingsScreen extends ConsumerWidget {
                                   ref,
                                   themeSettings,
                                 ),
+                              ),
+                              SettingsSwitchTile(
+                                icon: LucideIcons.sparkles,
+                                title: '极光背景',
+                                subtitle: '随天气变化的动态渐变背景；关闭后使用纯色背景',
+                                value: appSettings.auroraBackgroundEnabled,
+                                onChanged: (value) {
+                                  ref
+                                      .read(settingsProvider.notifier)
+                                      .setAuroraBackgroundEnabled(value);
+                                },
                               ),
                             ],
                           ),

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../app_localizations.dart';
 import '../providers/city_provider.dart';
 import '../providers/weather_provider.dart';
 import '../providers/settings_provider.dart';
+import '../core/constants/app_constants.dart';
 import '../core/theme/aurora_background.dart';
 import '../services/notification_service.dart';
 import 'weather/weather_screen.dart';
@@ -154,32 +156,17 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     ];
   }
 
-  /// 获取导航目标列表
+  /// 获取导航标签列表
   ///
   /// [showAIAssistant] 是否显示天气助手
   ///
-  /// 返回导航目标列表
-  List<NavigationDestination> _getDestinations(
-    BuildContext context,
-    bool showAIAssistant,
-  ) {
+  /// 返回 Liquid Glass 导航标签列表
+  List<GlassTab> _getTabs(BuildContext context, bool showAIAssistant) {
     return [
-      NavigationDestination(
-        icon: Icon(LucideIcons.cloud),
-        selectedIcon: Icon(LucideIcons.cloud),
-        label: context.tr('天气'),
-      ),
+      GlassTab(icon: Icon(LucideIcons.cloud), label: context.tr('天气')),
       if (showAIAssistant)
-        NavigationDestination(
-          icon: Icon(LucideIcons.brain),
-          selectedIcon: Icon(LucideIcons.brain),
-          label: context.tr('天气助手'),
-        ),
-      NavigationDestination(
-        icon: Icon(LucideIcons.settings),
-        selectedIcon: Icon(LucideIcons.settings),
-        label: context.tr('设置'),
-      ),
+        GlassTab(icon: Icon(LucideIcons.brain), label: context.tr('天气助手')),
+      GlassTab(icon: Icon(LucideIcons.settings), label: context.tr('设置')),
     ];
   }
 
@@ -189,7 +176,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     final weatherState = ref.watch(weatherProvider);
     final showAI = appSettings.showAIAssistant;
     final screens = _getScreens(showAI);
-    final destinations = _getDestinations(context, showAI);
+    final tabs = _getTabs(context, showAI);
     final weatherData = weatherState.weatherData;
     final weatherCode = weatherData != null
         ? (int.tryParse(weatherData.current.icon) ?? 100)
@@ -249,38 +236,60 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       }
     });
 
-    final scaffold = Scaffold(
-      extendBody: false,
-      body: IndexedStack(index: _currentIndex, children: screens),
-      bottomNavigationBar: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            height: 0.5,
-            color: Theme.of(
-              context,
-            ).colorScheme.outlineVariant.withValues(alpha: 0.3),
+    final background =
+        weatherCode != null && appSettings.auroraBackgroundEnabled
+        ? AuroraBackground(
+            weatherCode: weatherCode,
+            child: const SizedBox.expand(),
+          )
+        : ColoredBox(color: Theme.of(context).colorScheme.surface);
+
+    return GlassPage(
+      background: background,
+      child: Scaffold(
+        // The floating bar overlays the page like a native iOS tab bar.
+        // Scrollable content extends behind it and reserves its own bottom
+        // inset so the last item can still scroll clear of the bar.
+        extendBody: true,
+        // 页面级玻璃层会把共享层的玻璃形状统一绘制，IndexedStack 只画
+        // 选中页也拦不住未选中页里的玻璃控件（例如助手页的发送按钮会
+        // 浮到天气页上）。隔离后每个玻璃控件都使用自己页面子树内的独立
+        // 层，未选中页的玻璃就不会再被绘制出来。
+        body: GlassIsolationScope(
+          isolated: true,
+          child: IndexedStack(index: _currentIndex, children: screens),
+        ),
+        bottomNavigationBar: SafeArea(
+          top: false,
+          minimum: const EdgeInsets.fromLTRB(
+            kFloatingTabBarHorizontalMargin,
+            0,
+            kFloatingTabBarHorizontalMargin,
+            12,
           ),
-          NavigationBar(
-            selectedIndex: _currentIndex,
-            onDestinationSelected: (index) {
-              setState(() {
-                _currentIndex = index;
-              });
-            },
-            destinations: destinations,
+          child: Center(
+            heightFactor: 1,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: kFloatingTabBarMaxWidth,
+              ),
+              child: GlassTabBar.bottom(
+                tabs: tabs,
+                selectedIndex: _currentIndex,
+                horizontalPadding: 0,
+                verticalPadding: 0,
+                barHeight: kFloatingTabBarHeight,
+                barBorderRadius: 30,
+                onTabSelected: (index) {
+                  setState(() {
+                    _currentIndex = index;
+                  });
+                },
+              ),
+            ),
           ),
-        ],
+        ),
       ),
-    );
-
-    if (weatherCode != null) {
-      return AuroraBackground(weatherCode: weatherCode, child: scaffold);
-    }
-
-    return ColoredBox(
-      color: Theme.of(context).colorScheme.surface,
-      child: scaffold,
     );
   }
 }

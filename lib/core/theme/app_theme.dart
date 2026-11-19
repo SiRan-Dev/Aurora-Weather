@@ -129,11 +129,14 @@ extension AppThemeContext on BuildContext {
         AppUiTokens.fromColorScheme(theme.colorScheme);
   }
 
-  WeatherContrastColors weatherContrastColorsFor(int? weatherCode) {
+  WeatherContrastColors weatherContrastColorsFor(
+    int? weatherCode, {
+    bool useWeatherContrast = true,
+  }) {
     final theme = Theme.of(this);
     final colorScheme = theme.colorScheme;
 
-    if (weatherCode == null) {
+    if (weatherCode == null || !useWeatherContrast) {
       return WeatherContrastColors(
         accent: colorScheme.primary,
         foreground: colorScheme.onSurface,

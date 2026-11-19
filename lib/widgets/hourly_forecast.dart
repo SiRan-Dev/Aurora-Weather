@@ -7,7 +7,7 @@ import 'dart:ui';
 import '../app_localizations.dart';
 import '../models/weather_models.dart';
 import '../core/constants/app_constants.dart';
-import '../core/theme/app_theme.dart';
+import 'glass/aurora_glass_card.dart';
 
 /// 24小时天气预报组件
 ///
@@ -111,61 +111,47 @@ class _HourlyForecastState extends State<HourlyForecast> {
       return _buildEmptyState(context, subtitle: context.tr('小时数据已过期或时间解析失败'));
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: context.uiTokens.cardBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.uiTokens.cardBorder),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(context),
-            const SizedBox(height: 10),
-            _buildHourlyList(context, _filteredHourly, now),
-          ],
-        ),
+    return AuroraGlassCard(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildHeader(context),
+          const SizedBox(height: 10),
+          _buildHourlyList(context, _filteredHourly, now),
+        ],
       ),
     );
   }
 
   Widget _buildEmptyState(BuildContext context, {String? subtitle}) {
     final displaySubtitle = subtitle ?? context.tr('暂无小时预报数据');
-    return Container(
-      decoration: BoxDecoration(
-        color: context.uiTokens.cardBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.uiTokens.cardBorder),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(context),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Icon(
-                  LucideIcons.info,
-                  size: 18,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    displaySubtitle,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+    return AuroraGlassCard(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildHeader(context),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Icon(
+                LucideIcons.info,
+                size: 18,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  displaySubtitle,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

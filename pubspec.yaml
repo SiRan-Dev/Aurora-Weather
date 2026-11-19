@@ -2,7 +2,7 @@ name: pureweather
 description: "极光天气 - 一款使用 Aurora UI 的天气应用"
 publish_to: 'none'
 
-version: 7.0.0+83
+version: 7.0.0+87
 
 environment:
   sdk: ^3.9.0
@@ -27,6 +27,7 @@ dependencies:
   timezone: ^0.10.1
   lucide_icons_flutter: ^3.1.14+1
   package_info_plus: ^8.3.1
+  liquid_glass_widgets: ^1.17.5
 
 dev_dependencies:
   flutter_test:

@@ -3,7 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../app_localizations.dart';
 import '../models/weather_models.dart';
-import '../core/theme/app_theme.dart';
+import 'glass/aurora_glass_card.dart';
 
 /// 空气质量卡片组件
 ///
@@ -19,73 +19,64 @@ class AirQualityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tokens = context.uiTokens;
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: tokens.cardBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: tokens.cardBorder),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 头部
-            Row(
-              children: [
-                Icon(
-                  LucideIcons.wind,
-                  size: 20,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  context.tr('空气质量'),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            // AQI指数和空气质量等级
-            Row(
-              children: [
-                _buildAqiCircle(context),
-                const SizedBox(width: 24),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        context.tr(airQuality.category),
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w500,
-                          color: _getAqiColor(context),
-                        ),
+    return AuroraGlassCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 头部
+          Row(
+            children: [
+              Icon(
+                LucideIcons.wind,
+                size: 20,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                context.tr('空气质量'),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          // AQI指数和空气质量等级
+          Row(
+            children: [
+              _buildAqiCircle(context),
+              const SizedBox(width: 24),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      context.tr(airQuality.category),
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w500,
+                        color: _getAqiColor(context),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        context.tr(
-                          '主要污染物: {value}',
-                          args: {'value': _getMainPollutant()},
-                        ),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      context.tr(
+                        '主要污染物: {value}',
+                        args: {'value': _getMainPollutant()},
                       ),
-                    ],
-                  ),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            // 污染物数据网格
-            _buildPollutantsGrid(context),
-          ],
-        ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // 污染物数据网格
+          _buildPollutantsGrid(context),
+        ],
       ),
     ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1);
   }

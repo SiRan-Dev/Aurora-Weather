@@ -70,6 +70,9 @@ class AppLocalizations {
     '完成': 'Done',
     '个性化': 'Personalization',
     '主题模式': 'Theme Mode',
+    '极光背景': 'Aurora Background',
+    '随天气变化的动态渐变背景；关闭后使用纯色背景':
+        'Dynamic gradient background that follows the weather; uses a solid background when off.',
     'A屏黑主题': 'AMOLED Black Theme',
     '纯黑背景，更适合AMOLED屏幕': 'Pure black background, better for AMOLED displays.',
     '主题颜色': 'Theme Color',
