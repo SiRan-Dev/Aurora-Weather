@@ -4,7 +4,7 @@
 ![Platform](https://img.shields.io/badge/platform-Android%20%7C%20Windows%20%7C%20Linux%20%7C%20macOS%20%7C%20iOS%20%7C%20Web-brightgreen)
 ![Flutter](https://img.shields.io/badge/Flutter-3.41+-02569B?logo=flutter)
 
-一款使用 **Aurora UI** 构建的现代化跨平台天气应用，支持玻璃质感主题、多城市管理和 AI 天气助手。
+一款使用 Aurora UI 构建的现代化跨平台天气应用，支持Liquid Glass质感主题、多城市管理和 AI 天气助手。
 
 > ⚠️ **维护状态说明**  
 > 由于学业压力，本人暂时无暇顾及本软件的更新与维护。衷心感谢大家一直以来的支持与关注！  
@@ -12,7 +12,8 @@
 
 ## 预览
 
-![极光天气应用界面](App_Screenshot.jpg)
+<img width="3618" height="2622" alt="App_Screenshot" src="https://github.com/user-attachments/assets/cdb474a0-6136-4ab8-89fb-8437f11ed722" />
+
 
 ## 功能特性
 
@@ -37,6 +38,27 @@
 > 所有平台构建产物均由 GitHub Actions 自动发布到 [Releases](https://github.com/SiRan-Dev/Aurora-Weather/releases)。
 >
 > **7.0.0 应用身份变更**：应用 ID 已迁移为 `com.sirandev.auroraweather`。这是一次不兼容升级：iOS/SideStore、Android 和 Windows MSIX 会将其视为新应用，无法覆盖安装，旧版本的本地设置也不会自动迁移。
+
+### iOS 安装（SideStore / AltStore）
+
+iOS 安装包未签名，需要通过 SideStore 或 AltStore 使用你自己的证书签名安装。添加本项目的软件源后，可以直接在应用内安装和更新：
+
+```text
+https://raw.githubusercontent.com/SiRan-Dev/Aurora-Weather/main/altstore.json
+```
+
+- **SideStore 手动添加**：`Sources` → 右上角 `+` → 粘贴上面的地址。
+- **AltStore 手动添加**：`Browse` → `Sources` → 右上角 `+` → 粘贴上面的地址。
+- 也可以在 iOS 设备上打开下面的链接一键添加：
+
+```text
+sidestore://source?url=https%3A%2F%2Fraw.githubusercontent.com%2FSiRan-Dev%2FAurora-Weather%2Fmain%2Faltstore.json
+altstore://source?url=https%3A%2F%2Fraw.githubusercontent.com%2FSiRan-Dev%2FAurora-Weather%2Fmain%2Faltstore.json
+```
+
+- 或者在 [Releases](https://github.com/SiRan-Dev/Aurora-Weather/releases) 手动下载 `AuroraWeather-{version}-ios-unsigned.ipa`，再用 SideStore / AltStore 的 `+` 导入安装。
+
+> 软件源提供的是未签名 IPA，SideStore / AltStore 会在安装时重新签名。使用免费 Apple ID 签名的应用需要每 7 天续签一次。
 
 ---
 

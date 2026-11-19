@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,7 +27,8 @@ class MainScreen extends ConsumerStatefulWidget {
 }
 
 /// 主屏幕状态
-class _MainScreenState extends ConsumerState<MainScreen> {
+class _MainScreenState extends ConsumerState<MainScreen>
+    with WidgetsBindingObserver {
   /// 是否已初始化
   bool _hasInitialized = false;
 
@@ -35,9 +38,22 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initApp();
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    _retryLocationOnResume();
   }
 
   /// 初始化应用
@@ -47,22 +63,28 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
     final isFirstRun = await notificationServiceProvider.isFirstRun();
 
-    // 初始化 iOS 实时活动支持状态（非 iOS 平台直接返回 false）。
+// 初始化 iOS 实时活动支持状态（非 iOS 平台直接返回 false）。
     await liveActivityService.ensureReady();
 
+    // 有缓存城市时立即加载天气，不再等待定位完成
+    unawaited(_loadCachedCityWeather());
+
     if (isFirstRun) {
-      await _requestPermissionsOnFirstRun();
       await notificationServiceProvider.markFirstRunCompleted();
+      // 先处理定位权限，授予后立刻开始定位
+      await _requestLocationPermissionOnFirstRun();
+      // 通知权限不阻塞定位流程
+      unawaited(_requestNotificationPermissionOnFirstRun());
     }
 
     await _initLocation();
   }
 
-  /// 首次运行时请求权限
-  Future<void> _requestPermissionsOnFirstRun() async {
+  /// 首次运行时请求定位权限
+  Future<void> _requestLocationPermissionOnFirstRun() async {
     final hasLocationPermission = await ref
         .read(locationInitProvider.notifier)
-        .requestLocationPermission();
+        .requestLocationPermission(forceRequest: true);
     if (!mounted) return;
 
     if (!hasLocationPermission) {
@@ -71,22 +93,51 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         context.tr('极光天气需要定位权限来获取您当前位置的天气信息。请在设置中授予定位权限。'),
       );
     }
+  }
 
+  /// 首次运行时请求通知权限
+  ///
+  /// 与定位流程并行执行，避免系统设置页阻塞定位。
+  Future<void> _requestNotificationPermissionOnFirstRun() async {
     // 不支持系统通知的平台（Web、Windows）不弹通知权限提示。
-    if (supportsSystemNotifications) {
-      final hasNotificationPermission = await notificationServiceProvider
-          .requestNotificationPermission();
-      if (!mounted) return;
+    if (!supportsSystemNotifications) return;
 
-      if (!hasNotificationPermission) {
-        _showPermissionDialog(
-          context.tr('通知权限'),
-          context.tr('极光天气需要通知权限来推送天气预警信息。请在设置中授予通知权限。'),
-        );
-      }
+    final hasNotificationPermission = await notificationServiceProvider
+        .requestNotificationPermission();
+    if (!mounted) return;
 
-      await notificationServiceProvider.markNotificationPermissionRequested();
+    if (!hasNotificationPermission) {
+      _showPermissionDialog(
+        context.tr('通知权限'),
+        context.tr('极光天气需要通知权限来推送天气预警信息。请在设置中授予通知权限。'),
+      );
     }
+
+    await notificationServiceProvider.markNotificationPermissionRequested();
+  }
+
+  /// 使用缓存城市加载天气
+  Future<void> _loadCachedCityWeather() async {
+    await ref.read(cityManagerProvider.notifier).ensureLoaded();
+    final cachedCity = ref.read(defaultCityProvider);
+    if (cachedCity == null) return;
+    await ref.read(weatherProvider.notifier).loadWeather(cachedCity);
+  }
+
+  /// 用户可能刚在系统设置里授予定位权限，回到前台后自动重试
+  Future<void> _retryLocationOnResume() async {
+    if (!_hasInitialized) return;
+
+    final locationState = ref.read(locationInitProvider);
+    if (locationState.isLocating) return;
+    if (locationState.isInitialized && locationState.error == null) return;
+
+    final locationService = ref.read(locationServiceProvider);
+    locationService.resetPermissionCache();
+    final hasPermission = await locationService.hasLocationPermission();
+    if (!hasPermission) return;
+
+    await ref.read(locationInitProvider.notifier).initLocation(force: true);
   }
 
   /// 显示权限请求对话框
@@ -119,9 +170,9 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   }
 
   /// 初始化位置
-  /// 天气加载由 ref.listen(locationInitProvider) 统一处理，避免重复加载
+  ///
+  /// 定位成功后默认城市会更新，由 ref.listen(defaultCityProvider) 触发天气加载。
   Future<void> _initLocation() async {
-    await ref.read(locationInitProvider.notifier).requestLocationPermission();
     await ref.read(locationInitProvider.notifier).initLocation();
   }
 
@@ -190,21 +241,20 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         ? (int.tryParse(weatherData.current.icon) ?? 100)
         : null;
 
-    // 监听位置初始化状态
-    ref.listen(locationInitProvider, (previous, next) {
-      if (next.isInitialized) {
-        final defaultCity = ref.read(defaultCityProvider);
-        if (defaultCity != null) {
-          ref.read(weatherProvider.notifier).loadWeather(defaultCity);
-        }
-      }
-    });
-
     // 监听默认城市变化
     ref.listen(defaultCityProvider, (previous, next) {
-      if (next != null) {
-        ref.read(weatherProvider.notifier).loadWeather(next);
+      if (next == null) return;
+
+      // 同一位置只更新名称（例如反向地理编码补齐），避免重复请求天气
+      final current = ref.read(weatherProvider).weatherData;
+      if (current != null && current.location.id == next.id) {
+        if (current.location.name != next.name) {
+          ref.read(weatherProvider.notifier).updateLocationInfo(next);
+        }
+        return;
       }
+
+      ref.read(weatherProvider.notifier).loadWeather(next);
     });
 
     // 天气数据更新时同步 iOS 锁屏实时活动（Live Activity / 灵动岛）

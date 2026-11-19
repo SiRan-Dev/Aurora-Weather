@@ -151,7 +151,12 @@ class AppLocalizations {
         'All cities were deleted and location failed. Please search for a city or check location permissions.',
     '请稍候': 'Please wait',
     '正在获取天气信息...': 'Fetching weather data...',
+    '正在获取当前位置…': 'Getting your location…',
+    '定位失败': 'Location failed',
     '定位失败: {error}': 'Location failed: {error}',
+    '选择城市': 'Choose City',
+    '暂时无法获取当前位置，请重试或手动选择城市':
+        'Unable to get your location right now. Retry or choose a city manually.',
     '主要污染物: {value}': 'Primary Pollutant: {value}',
     '{count}条预警': '{count} alerts',
     '发布时间: {time}': 'Published: {time}',

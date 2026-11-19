@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 
+import '../app_localizations.dart';
 import '../models/weather_models.dart';
 import '../providers/settings_provider.dart';
 import '../services/location_service.dart';
@@ -79,6 +81,9 @@ class CityController extends StateNotifier<List<Location>> {
   Future<void> _ensureReady() async {
     await _ready;
   }
+
+  /// 等待城市列表从本地存储加载完成
+  Future<void> ensureLoaded() => _ready;
 
   bool _isSameCity(Location a, Location b) {
     return a.id == b.id ||
@@ -260,24 +265,29 @@ final defaultCityProvider = Provider<Location?>((ref) {
 @immutable
 class LocationInitState {
   final bool isInitialized;
+  final bool isLocating;
   final Location? currentLocation;
   final String? error;
 
   const LocationInitState({
     this.isInitialized = false,
+    this.isLocating = false,
     this.currentLocation,
     this.error,
   });
 
   LocationInitState copyWith({
     bool? isInitialized,
+    bool? isLocating,
     Location? currentLocation,
     String? error,
+    bool clearError = false,
   }) {
     return LocationInitState(
       isInitialized: isInitialized ?? this.isInitialized,
+      isLocating: isLocating ?? this.isLocating,
       currentLocation: currentLocation ?? this.currentLocation,
-      error: error,
+      error: clearError ? null : (error ?? this.error),
     );
   }
 }
@@ -285,55 +295,59 @@ class LocationInitState {
 class LocationInitNotifier extends StateNotifier<LocationInitState> {
   final Ref _ref;
 
+  /// 防止定位流程重复执行
+  bool _isLocating = false;
+
   LocationInitNotifier(this._ref) : super(const LocationInitState());
 
+  /// 初始化当前位置
+  ///
+  /// 先用系统缓存位置快速出结果，再请求一次新鲜位置；
+  /// 反向地理编码在后台补齐城市名称，不阻塞天气加载。
   Future<void> initLocation({bool force = false}) async {
-    if (state.isInitialized && !force) {
-      return;
-    }
+    if (_isLocating) return;
+    if (state.isInitialized && !force) return;
 
-    if (force) {
-      state = state.copyWith(isInitialized: false);
-    }
-
-    // Android 冷启动时 GPS 硬件需要约 2 秒预热，太短会导致首次定位返回 (0,0) 触发重试链
-    await Future.delayed(const Duration(seconds: 2));
+    _isLocating = true;
+    state = state.copyWith(
+      isInitialized: false,
+      isLocating: true,
+      clearError: true,
+    );
 
     try {
       final locationService = _ref.read(locationServiceProvider);
-      final position = await locationService.getCurrentPosition();
-      final appSettings = _ref.read(settingsProvider);
-      final cityController = _ref.read(cityManagerProvider.notifier);
-      final currentDefaultCity = _ref.read(defaultCityProvider);
-
-      if (position != null) {
-        final location = await locationService.getLocationFromCoords(
-          position.latitude,
-          position.longitude,
-          accuracyLevel: appSettings.locationAccuracyLevel,
-        );
-
-        var shouldSwitch = false;
-        if (currentDefaultCity == null) {
-          shouldSwitch = true;
-        } else {
-          final latDiff = (location.lat - currentDefaultCity.lat).abs();
-          final lonDiff = (location.lon - currentDefaultCity.lon).abs();
-          shouldSwitch = latDiff > 0.01 || lonDiff > 0.01;
-        }
-
-        if (shouldSwitch) {
-          await cityController.addCityAndSetDefault(location, isLocated: true);
-        }
-
+      final hasPermission = await locationService.checkAndRequestPermission();
+      if (!hasPermission) {
         state = LocationInitState(
           isInitialized: true,
-          currentLocation: location,
+          error: AppLocalizations.tr('无法获取位置，请检查权限设置'),
+        );
+        return;
+      }
+
+      // 1. 系统缓存位置通常立即可用，先让界面出结果
+      final cached = await locationService.getLastKnownPosition();
+      if (cached != null) {
+        await _applyPosition(cached);
+      }
+
+      // 2. 再请求新鲜位置，失败时保留缓存位置
+      final fresh = await locationService.getCurrentPosition();
+      if (fresh != null) {
+        await _applyPosition(fresh);
+      }
+
+      if (state.currentLocation == null) {
+        state = LocationInitState(
+          isInitialized: true,
+          error: AppLocalizations.tr('暂时无法获取当前位置，请重试或手动选择城市'),
         );
       } else {
-        state = const LocationInitState(
+        state = state.copyWith(
           isInitialized: true,
-          error: 'Unable to get location',
+          isLocating: false,
+          clearError: true,
         );
       }
     } catch (e) {
@@ -341,13 +355,94 @@ class LocationInitNotifier extends StateNotifier<LocationInitState> {
         isInitialized: true,
         error: e.toString(),
       );
+    } finally {
+      _isLocating = false;
+      if (state.isLocating) {
+        state = state.copyWith(isLocating: false);
+      }
     }
   }
 
-  Future<bool> requestLocationPermission() async {
+  /// 应用一次定位结果
+  ///
+  /// [position]: 定位坐标
+  Future<void> _applyPosition(Position position) async {
+    final locationService = _ref.read(locationServiceProvider);
+    final appSettings = _ref.read(settingsProvider);
+    final cityController = _ref.read(cityManagerProvider.notifier);
+    final currentDefaultCity = _ref.read(defaultCityProvider);
+
+    final provisional = _buildProvisionalLocation(position);
+    var shouldSwitch = currentDefaultCity == null;
+    if (currentDefaultCity != null) {
+      final latDiff = (position.latitude - currentDefaultCity.lat).abs();
+      final lonDiff = (position.longitude - currentDefaultCity.lon).abs();
+      shouldSwitch = latDiff > 0.01 || lonDiff > 0.01;
+    }
+
+    if (shouldSwitch) {
+      // 当前默认城市就是上一次的定位城市时原地替换，避免累积多个“当前位置”
+      if (currentDefaultCity != null && currentDefaultCity.isLocated) {
+        await cityController.updateDefaultCity(provisional);
+      } else {
+        // 先用坐标占位，天气请求不必等待反向地理编码
+        await cityController.addCityAndSetDefault(provisional, isLocated: true);
+      }
+    }
+
+    state = state.copyWith(currentLocation: provisional, clearError: true);
+
+    try {
+      final resolved = await locationService
+          .getLocationFromCoords(
+            position.latitude,
+            position.longitude,
+            accuracyLevel: appSettings.locationAccuracyLevel,
+          )
+          .timeout(const Duration(seconds: 5));
+
+      state = state.copyWith(currentLocation: resolved, clearError: true);
+      if (shouldSwitch) {
+        final latestDefault = _ref.read(defaultCityProvider);
+        if (latestDefault != null && latestDefault.isLocated) {
+          await cityController.updateDefaultCity(resolved);
+        } else {
+          await cityController.addCityAndSetDefault(resolved, isLocated: true);
+        }
+      }
+    } catch (e) {
+      // 反向地理编码失败不影响天气展示，保留坐标占位名称
+      debugPrint('[LocationInit] 反向地理编码失败: $e');
+    }
+  }
+
+  /// 用坐标构造占位城市，id 与反向地理编码结果保持一致
+  ///
+  /// [position]: 定位坐标
+  Location _buildProvisionalLocation(Position position) {
+    return Location(
+      id:
+          '${position.longitude.toStringAsFixed(4)},${position.latitude.toStringAsFixed(4)}',
+      name: AppLocalizations.tr('当前位置'),
+      adm1: '',
+      adm2: '',
+      country: AppLocalizations.tr('中国'),
+      lat: position.latitude,
+      lon: position.longitude,
+      tz: 'Asia/Shanghai',
+      utcOffset: '+08:00',
+      isDefault: true,
+      sortOrder: 0,
+      isLocated: true,
+    );
+  }
+
+  Future<bool> requestLocationPermission({bool forceRequest = true}) async {
     try {
       final locationService = _ref.read(locationServiceProvider);
-      return await locationService.checkAndRequestPermission();
+      return await locationService.checkAndRequestPermission(
+        forceRequest: forceRequest,
+      );
     } catch (_) {
       return false;
     }

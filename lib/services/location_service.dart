@@ -80,14 +80,46 @@ class LocationService {
     _permissionCache = null;
   }
 
+  /// 仅检查定位权限，不触发系统弹窗
+  ///
+  /// 用于应用回到前台时判断用户是否刚在系统设置里授予了权限。
+  Future<bool> hasLocationPermission() async {
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return false;
+      final permission = await Geolocator.checkPermission();
+      return permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// 读取系统缓存的上次定位
+  ///
+  /// 该调用通常毫秒级返回，用于冷启动或刚授权时先展示天气；
+  /// 无效坐标 (0,0) 视为没有缓存，返回 null。
+  Future<Position?> getLastKnownPosition() async {
+    try {
+      final position = await Geolocator.getLastKnownPosition();
+      if (position == null) return null;
+      if (position.latitude == 0.0 && position.longitude == 0.0) return null;
+      return position;
+    } catch (e) {
+      debugPrint('[LocationService] 读取缓存定位失败: $e');
+      return null;
+    }
+  }
+
   /// 获取当前位置
   ///
-  /// 返回当前位置信息，失败返回null
-  /// 包含重试机制以应对冷启动时GPS未就绪的情况
+  /// 返回当前位置信息，失败返回null。
+  /// 首次使用中精度快速定位，失败后降级为低精度重试，
+  /// 避免高精度冷启动时长时间拿不到结果。
   Future<Position?> getCurrentPosition({
-    int maxRetries = 3,
-    Duration initialDelay = const Duration(seconds: 1),
-    Duration maxDelay = const Duration(seconds: 5),
+    int maxRetries = 2,
+    Duration initialDelay = const Duration(milliseconds: 500),
+    Duration timeLimit = const Duration(seconds: 12),
   }) async {
     for (int attempt = 0; attempt < maxRetries; attempt++) {
       try {
@@ -95,37 +127,26 @@ class LocationService {
         final hasPermission = await checkAndRequestPermission(
           forceRequest: attempt == 0,
         );
-        if (!hasPermission) {
-          if (attempt == maxRetries - 1) {
-            return null;
-          }
-          final delay = Duration(
-            milliseconds: initialDelay.inMilliseconds * (attempt + 1),
-          );
-          await Future.delayed(delay);
-          continue;
-        }
+        if (!hasPermission) return null;
 
         final position = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.high,
-            timeLimit: Duration(seconds: 30),
+          locationSettings: LocationSettings(
+            accuracy: attempt == 0
+                ? LocationAccuracy.medium
+                : LocationAccuracy.low,
+            timeLimit: timeLimit,
           ),
         );
 
         // GPS 冷启动未就绪时可能返回 (0,0)，视为无效结果继续重试
         if (position.latitude == 0.0 && position.longitude == 0.0) {
-          debugPrint('[LocationService] GPS 返回零坐标，等待重试 (第${attempt + 1}次)');
-          if (attempt == maxRetries - 1) return position;
+          debugPrint('[LocationService] GPS 返回零坐标 (第${attempt + 1}次)');
           continue;
         }
 
         return position;
       } catch (e) {
         debugPrint('[LocationService] 获取位置失败 (第${attempt + 1}次): $e');
-        if (attempt == maxRetries - 1) {
-          return null;
-        }
       }
 
       if (attempt < maxRetries - 1) {
