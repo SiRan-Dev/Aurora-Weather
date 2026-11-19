@@ -18,7 +18,7 @@ import UIKit
       if let registrar = engineBridge.pluginRegistry.registrar(
         forPlugin: "AuroraLiveActivityBridge"
       ) {
-        LiveActivityBridge.shared.register(messenger: registrar.messenger)
+        LiveActivityBridge.shared.register(messenger: registrar.messenger())
       }
     }
   }

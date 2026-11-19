@@ -53,7 +53,11 @@ final class LiveActivityBridge {
     case "end":
       Task { @MainActor in
         for activity in Activity<AuroraWeatherActivityAttributes>.activities {
-          await activity.end(nil, dismissalPolicy: .immediate)
+          if #available(iOS 16.2, *) {
+            await activity.end(nil, dismissalPolicy: .immediate)
+          } else {
+            await activity.end()
+          }
         }
         result(nil)
       }
