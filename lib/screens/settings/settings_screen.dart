@@ -106,6 +106,21 @@ class SettingsScreen extends ConsumerWidget {
                                       .setLiquidGlassEnabled(value);
                                 },
                               ),
+                              // 锁屏实时活动仅 iOS 16.1+ 支持
+                              if (supportsLiveActivities)
+                                SettingsSwitchTile(
+                                  icon: LucideIcons.monitorSmartphone,
+                                  title: '锁屏实时活动',
+                                  subtitle:
+                                      '在锁屏和灵动岛上显示当前天气（iOS 16.1+），'
+                                      '随天气刷新同步更新',
+                                  value: appSettings.iosLiveActivityEnabled,
+                                  onChanged: (value) {
+                                    ref
+                                        .read(settingsProvider.notifier)
+                                        .setIosLiveActivityEnabled(value);
+                                  },
+                                ),
                             ],
                           ),
                           // 通知设置组（仅显示支持系统通知的平台）

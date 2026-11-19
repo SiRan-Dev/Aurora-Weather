@@ -34,6 +34,19 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 版本号以最新 git tag 为准（与 build-and-release.yml 一致），
+      # 避免 pubspec.yaml 的 version 不跟着 tag 升导致产物版本号漂移。
+      - name: Get version from git tag
+        id: version
+        run: |
+          TAG=$(git tag --list 'v*' --sort=-v:refname | head -n 1)
+          [[ -z "$TAG" ]] && TAG="v0.0.0"
+          VERSION="${TAG#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Using version: $VERSION"
 
       # .env 是 pubspec 里声明的 asset，构建前必须存在。
       # 输入的密钥通过 env 传入，脚本里只用变量名，避免值出现在日志中。
@@ -94,7 +107,9 @@ jobs:
         run: dart run build_runner build --delete-conflicting-outputs
 
       - name: Build iOS (no codesign)
-        run: flutter build ios --release --no-codesign
+        env:
+          BUILD_NAME: ${{ steps.version.outputs.version }}
+        run: flutter build ios --release --no-codesign --build-name="$BUILD_NAME" --build-number="$GITHUB_RUN_NUMBER"
 
       - name: Package IPA
         run: |
