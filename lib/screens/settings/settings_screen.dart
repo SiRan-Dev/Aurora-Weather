@@ -58,10 +58,7 @@ class SettingsScreen extends ConsumerWidget {
                       maxWidth: isWide ? 900 : double.infinity,
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
                       child: Column(
                         children: [
                           // 个性化设置组

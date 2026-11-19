@@ -188,41 +188,45 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // 城市名称
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (location?.isLocated == true) ...[
-                      Icon(
-                        LucideIcons.mapPin,
-                        size: 20,
-                        color: Theme.of(context).colorScheme.primary,
+            SizedBox(
+              height: 48,
+              child: Stack(
+                alignment: Alignment.center,
+                clipBehavior: Clip.none,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (location?.isLocated == true) ...[
+                        Icon(
+                          LucideIcons.mapPin,
+                          size: 20,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                      Text(
+                        location?.name ?? context.tr('未知位置'),
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
+                              color: foregroundColor,
+                              fontWeight: FontWeight.w500,
+                            ),
                       ),
-                      const SizedBox(width: 4),
                     ],
-                    Text(
-                      location?.name ?? context.tr('未知位置'),
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(
-                            color: foregroundColor,
-                            fontWeight: FontWeight.w500,
-                          ),
-                    ),
-                  ],
-                ),
-                Positioned(
-                  right: 0,
-                  child: AuroraGlassIconButton(
-                    icon: LucideIcons.navigation,
-                    color: mutedForegroundColor,
-                    iconSize: 20,
-                    onPressed: _showCitySelector,
-                    tooltip: context.tr('导航'),
                   ),
-                ),
-              ],
+                  Positioned(
+                    right: 0,
+                    child: AuroraGlassIconButton(
+                      icon: LucideIcons.navigation,
+                      color: mutedForegroundColor,
+                      iconSize: 20,
+                      onPressed: _showCitySelector,
+                      tooltip: context.tr('导航'),
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 8),
             // 当前温度
@@ -357,6 +361,7 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
     return SizedBox(
       height: viewportHeight,
       child: Stack(
+        clipBehavior: Clip.none,
         children: [
           Positioned.fill(child: Container(color: Colors.transparent)),
           Positioned(
@@ -413,6 +418,7 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
     return SizedBox(
       height: viewportHeight,
       child: Stack(
+        clipBehavior: Clip.none,
         children: [
           Positioned.fill(child: Container(color: Colors.transparent)),
           Positioned(
@@ -471,7 +477,7 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
     final order = settings.weatherCardOrder;
 
     return Padding(
-      padding: const EdgeInsets.only(left: 12, right: 12, top: 12, bottom: 0),
+      padding: const EdgeInsets.only(left: 12, right: 12, top: 12, bottom: 96),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
