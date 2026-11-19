@@ -48,6 +48,9 @@ class AppSettings {
   /// 是否启用极光背景
   final bool auroraBackgroundEnabled;
 
+  /// 是否启用 Liquid Glass 玻璃质感
+  final bool liquidGlassEnabled;
+
   /// 是否显示天气助手
   final bool showAIAssistant;
 
@@ -82,6 +85,7 @@ class AppSettings {
     this.temperatureUnit = 'celsius',
     this.showFeelsLike = true,
     this.auroraBackgroundEnabled = true,
+    this.liquidGlassEnabled = true,
     this.showAIAssistant = false,
     this.aiProviderType = AiProviderType.openAiCompatible,
     this.aiApiKey = '',
@@ -108,6 +112,7 @@ class AppSettings {
   /// [temperatureUnit]: 温度单位
   /// [showFeelsLike]: 是否显示体感温度
   /// [auroraBackgroundEnabled]: 是否启用极光背景
+  /// [liquidGlassEnabled]: 是否启用 Liquid Glass 玻璃质感
   /// [showAIAssistant]: 是否显示天气助手
   /// [aiProviderType]: AI 服务提供商
   /// [aiApiKey]: AI 服务 API Key
@@ -125,6 +130,7 @@ class AppSettings {
     String? temperatureUnit,
     bool? showFeelsLike,
     bool? auroraBackgroundEnabled,
+    bool? liquidGlassEnabled,
     bool? showAIAssistant,
     AiProviderType? aiProviderType,
     String? aiApiKey,
@@ -147,6 +153,7 @@ class AppSettings {
       showFeelsLike: showFeelsLike ?? this.showFeelsLike,
       auroraBackgroundEnabled:
           auroraBackgroundEnabled ?? this.auroraBackgroundEnabled,
+      liquidGlassEnabled: liquidGlassEnabled ?? this.liquidGlassEnabled,
       showAIAssistant: showAIAssistant ?? this.showAIAssistant,
       aiProviderType: aiProviderType ?? this.aiProviderType,
       aiApiKey: aiApiKey ?? this.aiApiKey,
@@ -188,6 +195,9 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
 
   /// 极光背景设置键
   static const String _keyAuroraBackground = 'aurora_background_enabled';
+
+  /// Liquid Glass 玻璃质感设置键
+  static const String _keyLiquidGlass = 'liquid_glass_enabled';
 
   /// 显示天气助手设置键
   static const String _keyShowAIAssistant = 'show_ai_assistant';
@@ -257,6 +267,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
       temperatureUnit: prefs.getString(_keyTemperatureUnit) ?? 'celsius',
       showFeelsLike: prefs.getBool(_keyShowFeelsLike) ?? true,
       auroraBackgroundEnabled: prefs.getBool(_keyAuroraBackground) ?? true,
+      liquidGlassEnabled: prefs.getBool(_keyLiquidGlass) ?? true,
       showAIAssistant: prefs.getBool(_keyShowAIAssistant) ?? false,
       aiProviderType: aiProviderType,
       aiApiKey: prefs.getString(_keyAiApiKey) ?? '',
@@ -339,6 +350,15 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyAuroraBackground, value);
     state = state.copyWith(auroraBackgroundEnabled: value);
+  }
+
+  /// 设置是否启用 Liquid Glass 玻璃质感
+  ///
+  /// [value]: 是否启用
+  Future<void> setLiquidGlassEnabled(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyLiquidGlass, value);
+    state = state.copyWith(liquidGlassEnabled: value);
   }
 
   /// 设置是否显示天气助手

@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import '../../core/theme/app_theme.dart';
+import '../../providers/settings_provider.dart';
 
 /// Aurora UI 的 Liquid Glass 图标按钮。
-class AuroraGlassIconButton extends StatelessWidget {
+///
+/// 用户关闭 Liquid Glass 后改为普通的圆形半透明按钮，
+/// 尺寸、图标大小和提示行为保持不变。
+class AuroraGlassIconButton extends ConsumerWidget {
   /// 图标
   final IconData icon;
 
@@ -43,7 +49,33 @@ class AuroraGlassIconButton extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final glassEnabled = ref.watch(
+      settingsProvider.select((settings) => settings.liquidGlassEnabled),
+    );
+
+    if (!glassEnabled) {
+      final tokens = context.uiTokens;
+      return Container(
+        width: size,
+        height: size,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: tokens.cardBackground,
+          shape: BoxShape.circle,
+          border: Border.all(color: tokens.cardBorder),
+        ),
+        child: IconButton(
+          icon: Icon(icon, size: iconSize, color: color),
+          onPressed: onPressed,
+          tooltip: tooltip,
+          iconSize: iconSize,
+          padding: EdgeInsets.zero,
+          constraints: BoxConstraints.tightFor(width: size, height: size),
+        ),
+      );
+    }
+
     final hasGlassScope = LiquidGlassScope.of(context) != null;
 
     final button = GlassIconButton(

@@ -92,6 +92,19 @@ class SettingsScreen extends ConsumerWidget {
                                       .setAuroraBackgroundEnabled(value);
                                 },
                               ),
+                              SettingsSwitchTile(
+                                icon: LucideIcons.droplets,
+                                title: 'Liquid Glass 玻璃效果',
+                                subtitle:
+                                    '卡片、按钮和底栏使用液态玻璃质感；关闭后改用普通半透明表面，'
+                                    '在 Windows 等平台更流畅',
+                                value: appSettings.liquidGlassEnabled,
+                                onChanged: (value) {
+                                  ref
+                                      .read(settingsProvider.notifier)
+                                      .setLiquidGlassEnabled(value);
+                                },
+                              ),
                             ],
                           ),
                           // 通知设置组
