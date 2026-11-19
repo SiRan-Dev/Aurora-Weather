@@ -37,6 +37,29 @@ class AppConstants {
   static const int defaultAnimationDuration = 300;
 }
 
+/// 悬浮玻璃底栏的高度（不含底部安全区）
+const double kFloatingTabBarHeight = 60;
+
+/// 悬浮玻璃底栏 SafeArea 的最小底部留白
+const double kFloatingTabBarMinSafeBottom = 12;
+
+/// 滚动内容滚到底时与悬浮底栏之间保留的间距
+const double kFloatingTabBarContentGap = 16;
+
+/// 延伸到悬浮底栏后方的滚动视图所需的底部内边距。
+///
+/// 底栏通过 `extendBody: true` 覆盖在页面之上，滚动视图会一直延伸
+/// 到屏幕底部。此时 `Scaffold` 会把 body 的
+/// `MediaQuery.padding.bottom` 设为底栏整体高度（底栏 + 安全区），
+/// 也就是底栏上沿到屏幕底部的距离；滚动内容只需再叠加一个间距，
+/// 最后一项就能完整滚动到底栏上方。
+///
+/// 不要改用 `viewPaddingOf`：`Scaffold` 在 `extendBody` 下会把 body
+/// 的 viewPadding 一并清零，用它反而会少算安全区。
+double floatingTabBarScrollInset(BuildContext context) {
+  return MediaQuery.paddingOf(context).bottom + kFloatingTabBarContentGap;
+}
+
 /// 天气代码工具类
 /// 提供天气代码的描述、图标和温度转换功能
 class WeatherCode {

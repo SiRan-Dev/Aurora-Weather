@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'dart:ui';
 import '../../app_localizations.dart';
 import '../../services/deepseek_service.dart';
@@ -10,6 +11,7 @@ import '../../providers/settings_provider.dart';
 import '../../providers/weather_provider.dart';
 import '../../providers/city_provider.dart';
 import '../../models/weather_models.dart';
+import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../widgets/glass/aurora_glass_card.dart';
 import '../../widgets/glass/aurora_glass_icon_button.dart';
@@ -447,6 +449,8 @@ class _AIAssistantScreenState extends ConsumerState<AIAssistantScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       borderRadius: 14,
+      // 与输入框保持一致的高级玻璃质感，避免在浅色背景上退化成灰色矩形。
+      quality: GlassQuality.premium,
       child: Row(
         children: [
           Container(
@@ -476,15 +480,24 @@ class _AIAssistantScreenState extends ConsumerState<AIAssistantScreen> {
 
   /// 构建输入区域
   Widget _buildInputArea(bool isAiConfigured) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final bool canSend = !_isTyping && isAiConfigured;
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Expanded(
-            child: AuroraGlassCard(
-              borderRadius: 18,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      // 主页面 `extendBody: true` 时，Scaffold 已经通过 body 的
+      // MediaQuery 把这里 SafeArea 的底部内边距抬到了底栏上沿，
+      // 因此只需再补一个间距，让输入框不要贴着底栏。
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, kFloatingTabBarContentGap),
+      // 输入框和发送按钮合成一整块玻璃胶囊，避免浅色背景上出现
+      // 一块平铺的矩形底色，和底栏保持同一套 Liquid Glass 质感。
+      child: AuroraGlassCard(
+        borderRadius: 26,
+        padding: const EdgeInsets.fromLTRB(16, 2, 4, 2),
+        quality: GlassQuality.premium,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(
               child: TextField(
                 controller: _messageController,
                 focusNode: _focusNode,
@@ -497,7 +510,7 @@ class _AIAssistantScreenState extends ConsumerState<AIAssistantScreen> {
                   focusedBorder: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 4,
-                    vertical: 10,
+                    vertical: 12,
                   ),
                 ),
                 maxLines: null,
@@ -506,16 +519,22 @@ class _AIAssistantScreenState extends ConsumerState<AIAssistantScreen> {
                 onSubmitted: (_) => _sendMessage(),
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-          AuroraGlassIconButton(
-            icon: LucideIcons.send,
-            tooltip: context.tr('发送'),
-            size: 48,
-            iconSize: 20,
-            onPressed: _isTyping || !isAiConfigured ? null : _sendMessage,
-          ),
-        ],
+            SizedBox(
+              width: 48,
+              height: 48,
+              child: IconButton(
+                icon: const Icon(LucideIcons.send, size: 20),
+                color: colorScheme.primary,
+                disabledColor: colorScheme.onSurfaceVariant.withValues(
+                  alpha: 0.4,
+                ),
+                tooltip: context.tr('发送'),
+                padding: EdgeInsets.zero,
+                onPressed: canSend ? _sendMessage : null,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

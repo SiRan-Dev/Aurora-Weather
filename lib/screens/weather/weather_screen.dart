@@ -482,7 +482,12 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
     final order = settings.weatherCardOrder;
 
     return Padding(
-      padding: const EdgeInsets.only(left: 12, right: 12, top: 12, bottom: 96),
+      padding: EdgeInsets.only(
+        left: 12,
+        right: 12,
+        top: 12,
+        bottom: floatingTabBarScrollInset(context),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

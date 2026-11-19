@@ -37,6 +37,7 @@ class SettingsScreen extends ConsumerWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final bool isWide = constraints.maxWidth > 900;
+        final bottomInset = floatingTabBarScrollInset(context);
 
         final scaffoldBody = ScrollConfiguration(
           behavior: ScrollConfiguration.of(context).copyWith(
@@ -58,7 +59,7 @@ class SettingsScreen extends ConsumerWidget {
                       maxWidth: isWide ? 900 : double.infinity,
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                      padding: EdgeInsets.fromLTRB(16, 8, 16, bottomInset),
                       child: Column(
                         children: [
                           // 个性化设置组

@@ -7,6 +7,7 @@ import '../app_localizations.dart';
 import '../providers/city_provider.dart';
 import '../providers/weather_provider.dart';
 import '../providers/settings_provider.dart';
+import '../core/constants/app_constants.dart';
 import '../core/theme/aurora_background.dart';
 import '../services/notification_service.dart';
 import 'weather/weather_screen.dart';
@@ -246,32 +247,37 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     return GlassPage(
       background: background,
       child: Scaffold(
-        extendBody: false,
-        body: IndexedStack(index: _currentIndex, children: screens),
-        bottomNavigationBar: Padding(
-          // Keep breathing room above the floating pill for its glow/shadow,
-          // so page cards are not cut flush against the bar.
-          padding: const EdgeInsets.only(top: 20),
-          child: SafeArea(
-            top: false,
-            minimum: const EdgeInsets.fromLTRB(24, 0, 24, 12),
-            child: Center(
-              heightFactor: 1,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 520),
-                child: GlassTabBar.bottom(
-                  tabs: tabs,
-                  selectedIndex: _currentIndex,
-                  horizontalPadding: 0,
-                  verticalPadding: 0,
-                  barHeight: 60,
-                  barBorderRadius: 30,
-                  onTabSelected: (index) {
-                    setState(() {
-                      _currentIndex = index;
-                    });
-                  },
-                ),
+        // The floating bar overlays the page like a native iOS tab bar.
+        // Scrollable content extends behind it and reserves its own bottom
+        // inset so the last item can still scroll clear of the bar.
+        extendBody: true,
+        // 页面级玻璃层会把共享层的玻璃形状统一绘制，IndexedStack 只画
+        // 选中页也拦不住未选中页里的玻璃控件（例如助手页的发送按钮会
+        // 浮到天气页上）。隔离后每个玻璃控件都使用自己页面子树内的独立
+        // 层，未选中页的玻璃就不会再被绘制出来。
+        body: GlassIsolationScope(
+          isolated: true,
+          child: IndexedStack(index: _currentIndex, children: screens),
+        ),
+        bottomNavigationBar: SafeArea(
+          top: false,
+          minimum: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+          child: Center(
+            heightFactor: 1,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: GlassTabBar.bottom(
+                tabs: tabs,
+                selectedIndex: _currentIndex,
+                horizontalPadding: 0,
+                verticalPadding: 0,
+                barHeight: kFloatingTabBarHeight,
+                barBorderRadius: 30,
+                onTabSelected: (index) {
+                  setState(() {
+                    _currentIndex = index;
+                  });
+                },
               ),
             ),
           ),
