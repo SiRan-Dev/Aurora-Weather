@@ -51,6 +51,9 @@ class AppSettings {
   /// 是否启用 Liquid Glass 玻璃质感
   final bool liquidGlassEnabled;
 
+  /// 是否启用 iOS 锁屏实时活动（Live Activity / 灵动岛）
+  final bool iosLiveActivityEnabled;
+
   /// 是否显示天气助手
   final bool showAIAssistant;
 
@@ -86,6 +89,7 @@ class AppSettings {
     this.showFeelsLike = true,
     this.auroraBackgroundEnabled = true,
     this.liquidGlassEnabled = true,
+    this.iosLiveActivityEnabled = true,
     this.showAIAssistant = false,
     this.aiProviderType = AiProviderType.openAiCompatible,
     this.aiApiKey = '',
@@ -113,6 +117,7 @@ class AppSettings {
   /// [showFeelsLike]: 是否显示体感温度
   /// [auroraBackgroundEnabled]: 是否启用极光背景
   /// [liquidGlassEnabled]: 是否启用 Liquid Glass 玻璃质感
+  /// [iosLiveActivityEnabled]: 是否启用 iOS 锁屏实时活动
   /// [showAIAssistant]: 是否显示天气助手
   /// [aiProviderType]: AI 服务提供商
   /// [aiApiKey]: AI 服务 API Key
@@ -131,6 +136,7 @@ class AppSettings {
     bool? showFeelsLike,
     bool? auroraBackgroundEnabled,
     bool? liquidGlassEnabled,
+    bool? iosLiveActivityEnabled,
     bool? showAIAssistant,
     AiProviderType? aiProviderType,
     String? aiApiKey,
@@ -154,6 +160,8 @@ class AppSettings {
       auroraBackgroundEnabled:
           auroraBackgroundEnabled ?? this.auroraBackgroundEnabled,
       liquidGlassEnabled: liquidGlassEnabled ?? this.liquidGlassEnabled,
+      iosLiveActivityEnabled:
+          iosLiveActivityEnabled ?? this.iosLiveActivityEnabled,
       showAIAssistant: showAIAssistant ?? this.showAIAssistant,
       aiProviderType: aiProviderType ?? this.aiProviderType,
       aiApiKey: aiApiKey ?? this.aiApiKey,
@@ -198,6 +206,9 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
 
   /// Liquid Glass 玻璃质感设置键
   static const String _keyLiquidGlass = 'liquid_glass_enabled';
+
+  /// iOS 锁屏实时活动设置键
+  static const String _keyIosLiveActivity = 'ios_live_activity_enabled';
 
   /// 显示天气助手设置键
   static const String _keyShowAIAssistant = 'show_ai_assistant';
@@ -268,6 +279,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
       showFeelsLike: prefs.getBool(_keyShowFeelsLike) ?? true,
       auroraBackgroundEnabled: prefs.getBool(_keyAuroraBackground) ?? true,
       liquidGlassEnabled: prefs.getBool(_keyLiquidGlass) ?? true,
+      iosLiveActivityEnabled: prefs.getBool(_keyIosLiveActivity) ?? true,
       showAIAssistant: prefs.getBool(_keyShowAIAssistant) ?? false,
       aiProviderType: aiProviderType,
       aiApiKey: prefs.getString(_keyAiApiKey) ?? '',
@@ -287,6 +299,15 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyPredictiveBack, value);
     state = state.copyWith(predictiveBackEnabled: value);
+  }
+
+  /// 设置是否启用 iOS 锁屏实时活动
+  ///
+  /// [value]: 是否启用
+  Future<void> setIosLiveActivityEnabled(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyIosLiveActivity, value);
+    state = state.copyWith(iosLiveActivityEnabled: value);
   }
 
   /// 设置是否启用通知

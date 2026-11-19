@@ -76,6 +76,9 @@ class AppLocalizations {
     'Liquid Glass 玻璃效果': 'Liquid Glass Effects',
     '卡片、按钮和底栏使用液态玻璃质感；关闭后改用普通半透明表面，在 Windows 等平台更流畅':
         'Use liquid glass for cards, buttons and the tab bar; switch off for plain translucent surfaces and better performance on Windows and other platforms.',
+    '锁屏实时活动': 'Live Activity',
+    '在锁屏和灵动岛上显示当前天气（iOS 16.1+），随天气刷新同步更新':
+        'Show current weather on the Lock Screen and Dynamic Island (iOS 16.1+), updated as the weather refreshes.',
     'A屏黑主题': 'AMOLED Black Theme',
     '纯黑背景，更适合AMOLED屏幕': 'Pure black background, better for AMOLED displays.',
     '主题颜色': 'Theme Color',

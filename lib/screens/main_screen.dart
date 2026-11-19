@@ -10,6 +10,7 @@ import '../providers/settings_provider.dart';
 import '../core/constants/app_constants.dart';
 import '../core/platform/platform_capabilities.dart';
 import '../core/theme/aurora_background.dart';
+import '../services/live_activity_service.dart';
 import '../services/notification_service.dart';
 import 'weather/weather_screen.dart';
 import 'ai_assistant/ai_assistant_screen.dart';
@@ -45,6 +46,9 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     _hasInitialized = true;
 
     final isFirstRun = await notificationServiceProvider.isFirstRun();
+
+    // 初始化 iOS 实时活动支持状态（非 iOS 平台直接返回 false）。
+    await liveActivityService.ensureReady();
 
     if (isFirstRun) {
       await _requestPermissionsOnFirstRun();
@@ -203,6 +207,15 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       }
     });
 
+    // 天气数据更新时同步 iOS 锁屏实时活动（Live Activity / 灵动岛）
+    ref.listen(weatherProvider, (previous, next) {
+      final data = next.weatherData;
+      if (data == null) return;
+      if (previous?.weatherData?.lastUpdated == data.lastUpdated) return;
+      if (!ref.read(settingsProvider).iosLiveActivityEnabled) return;
+      liveActivityService.update(LiveActivityService.payloadFromWeather(data));
+    });
+
     // 监听设置变化
     ref.listen(settingsProvider, (previous, next) {
       if (previous == null) return;
@@ -227,6 +240,17 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             .syncAndroidLiveUpdateNotificationWithSettings(
               scene: 'settings_changed',
             );
+      }
+
+      if (previous.iosLiveActivityEnabled != next.iosLiveActivityEnabled) {
+        final data = ref.read(weatherProvider).weatherData;
+        if (next.iosLiveActivityEnabled && data != null) {
+          liveActivityService.start(
+            LiveActivityService.payloadFromWeather(data),
+          );
+        } else {
+          liveActivityService.end();
+        }
       }
 
       if (previous.appLanguage != next.appLanguage) {
