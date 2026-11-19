@@ -43,6 +43,12 @@ const double kFloatingTabBarHeight = 60;
 /// 悬浮玻璃底栏 SafeArea 的最小底部留白
 const double kFloatingTabBarMinSafeBottom = 12;
 
+/// 悬浮玻璃底栏左右两侧的留白（与安全区取较大值）
+const double kFloatingTabBarHorizontalMargin = 24;
+
+/// 悬浮玻璃底栏的最大宽度（宽屏上居中显示）
+const double kFloatingTabBarMaxWidth = 520;
+
 /// 滚动内容滚到底时与悬浮底栏之间保留的间距
 const double kFloatingTabBarContentGap = 16;
 

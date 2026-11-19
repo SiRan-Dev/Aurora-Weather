@@ -261,11 +261,18 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         ),
         bottomNavigationBar: SafeArea(
           top: false,
-          minimum: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+          minimum: const EdgeInsets.fromLTRB(
+            kFloatingTabBarHorizontalMargin,
+            0,
+            kFloatingTabBarHorizontalMargin,
+            12,
+          ),
           child: Center(
             heightFactor: 1,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520),
+              constraints: const BoxConstraints(
+                maxWidth: kFloatingTabBarMaxWidth,
+              ),
               child: GlassTabBar.bottom(
                 tabs: tabs,
                 selectedIndex: _currentIndex,
