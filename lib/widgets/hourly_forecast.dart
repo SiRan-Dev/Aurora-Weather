@@ -8,6 +8,7 @@ import '../app_localizations.dart';
 import '../models/weather_models.dart';
 import '../core/constants/app_constants.dart';
 import 'glass/aurora_glass_card.dart';
+import 'glass/glass_card_header.dart';
 
 /// 24小时天气预报组件
 ///
@@ -157,21 +158,9 @@ class _HourlyForecastState extends State<HourlyForecast> {
   }
 
   Widget _buildHeader(BuildContext context) {
-    return Row(
-      children: [
-        Icon(
-          LucideIcons.clock,
-          size: 20,
-          color: Theme.of(context).colorScheme.primary,
-        ),
-        const SizedBox(width: 8),
-        Text(
-          context.tr('24小时预报'),
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
-        ),
-      ],
+    return GlassCardHeader(
+      icon: LucideIcons.clock,
+      title: context.tr('24小时预报'),
     );
   }
 
@@ -193,42 +182,42 @@ class _HourlyForecastState extends State<HourlyForecast> {
             (screenWidth - (itemGap * (targetVisibleItems - 1))) /
             targetVisibleItems;
 
-        return SizedBox(
-          height: hasAnyPrecipitation ? 120 : 100,
-          child: ScrollConfiguration(
-            behavior: ScrollConfiguration.of(context).copyWith(
-              dragDevices: {
-                PointerDeviceKind.touch,
-                PointerDeviceKind.mouse,
-                PointerDeviceKind.stylus,
-                PointerDeviceKind.invertedStylus,
-                PointerDeviceKind.trackpad,
-              },
-            ),
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: hourly.length,
-              cacheExtent: 1000,
-              physics: const AlwaysScrollableScrollPhysics(),
-              itemBuilder: (context, index) {
-                return Padding(
-                  padding: EdgeInsets.only(
-                    right: index < hourly.length - 1 ? itemGap : 0,
-                  ),
-                  child: SizedBox(
-                    width: itemWidth,
-                    child: _HourlyItem(
-                      weather: hourly[index],
-                      now: now,
-                      sunrise: widget.sunrise,
-                      sunset: widget.sunset,
-                      nextSunrise: widget.nextSunrise,
-                      showPrecipitation: hasAnyPrecipitation,
-                      temperatureUnit: widget.temperatureUnit,
+        return ScrollConfiguration(
+          behavior: ScrollConfiguration.of(context).copyWith(
+            dragDevices: {
+              PointerDeviceKind.touch,
+              PointerDeviceKind.mouse,
+              PointerDeviceKind.stylus,
+              PointerDeviceKind.invertedStylus,
+              PointerDeviceKind.trackpad,
+            },
+          ),
+          // 用 SingleChildScrollView + Row 代替固定高度的 ListView：
+          // 高度由内容决定，随字体缩放自适应，大字体/华氏度下不再溢出。
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var i = 0; i < hourly.length; i++)
+                  Padding(
+                    padding: EdgeInsets.only(
+                      right: i < hourly.length - 1 ? itemGap : 0,
+                    ),
+                    child: SizedBox(
+                      width: itemWidth,
+                      child: _HourlyItem(
+                        weather: hourly[i],
+                        now: now,
+                        sunrise: widget.sunrise,
+                        sunset: widget.sunset,
+                        nextSunrise: widget.nextSunrise,
+                        showPrecipitation: hasAnyPrecipitation,
+                        temperatureUnit: widget.temperatureUnit,
+                      ),
                     ),
                   ),
-                );
-              },
+              ],
             ),
           ),
         );
@@ -325,12 +314,18 @@ class _HourlyItem extends StatelessWidget {
         showPrecipitation && weather.pop != '0' && weather.pop.isNotEmpty;
 
     return Column(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         _buildTimeText(context, localTime),
+        const SizedBox(height: 6),
         _buildWeatherIcon(context, iconCode, isNight),
+        const SizedBox(height: 6),
         _buildTempText(context),
-        if (hasPrecipitation) _buildPrecipitation(context),
+        if (hasPrecipitation) ...[
+          const SizedBox(height: 6),
+          _buildPrecipitation(context),
+        ],
       ],
     );
   }

@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../app_localizations.dart';
 import '../models/weather_models.dart';
 import 'glass/aurora_glass_card.dart';
+import 'glass/glass_card_header.dart';
 
 class WeatherIndicesCard extends StatelessWidget {
   final List<WeatherIndices> indices;
@@ -22,21 +23,9 @@ class WeatherIndicesCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(
-                LucideIcons.lightbulb,
-                size: 20,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                context.tr('生活指数'),
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
-              ),
-            ],
+          GlassCardHeader(
+            icon: LucideIcons.lightbulb,
+            title: context.tr('生活指数'),
           ),
           const SizedBox(height: 16),
           // 两行三列布局

@@ -20,6 +20,33 @@ enum AppLanguage { system, zhCN, enUS }
 /// - anthropic: Anthropic Messages API
 enum AiProviderType { openAiCompatible, anthropic }
 
+/// 天气卡片类型（参与首页卡片排序）
+enum WeatherCardType {
+  /// 24 小时预报
+  hourly,
+
+  /// 7 天预报
+  daily,
+
+  /// 空气质量
+  airQuality,
+
+  /// 详细信息（风、湿度、气压…）
+  details,
+
+  /// 生活指数
+  indices,
+}
+
+/// 天气卡片顺序的默认排列
+const List<WeatherCardType> kDefaultWeatherCardOrder = [
+  WeatherCardType.hourly,
+  WeatherCardType.daily,
+  WeatherCardType.airQuality,
+  WeatherCardType.details,
+  WeatherCardType.indices,
+];
+
 /// 应用设置类
 ///
 /// 管理应用的所有设置选项
@@ -76,7 +103,7 @@ class AppSettings {
   final AppLanguage appLanguage;
 
   /// 天气卡片顺序
-  final List<String> weatherCardOrder;
+  final List<WeatherCardType> weatherCardOrder;
 
   /// 构造函数
   const AppSettings({
@@ -97,13 +124,7 @@ class AppSettings {
     this.aiModel = '',
     this.locationAccuracyLevel = LocationAccuracyLevel.district,
     this.appLanguage = AppLanguage.system,
-    this.weatherCardOrder = const [
-      'hourly',
-      'daily',
-      'airQuality',
-      'details',
-      'indices',
-    ],
+    this.weatherCardOrder = kDefaultWeatherCardOrder,
   });
 
   /// 复制并更新设置
@@ -144,7 +165,7 @@ class AppSettings {
     String? aiModel,
     LocationAccuracyLevel? locationAccuracyLevel,
     AppLanguage? appLanguage,
-    List<String>? weatherCardOrder,
+    List<WeatherCardType>? weatherCardOrder,
   }) {
     return AppSettings(
       predictiveBackEnabled:
@@ -261,10 +282,13 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
 
     // 加载并修复天气卡片顺序
     final savedOrder = prefs.getStringList(_keyWeatherCardOrder);
-    const validOrder = ['hourly', 'daily', 'airQuality', 'details', 'indices'];
-    final validatedOrder = _normalizeCardOrder(savedOrder, validOrder);
-    if (savedOrder == null || !_listEquals(savedOrder, validatedOrder)) {
-      await prefs.setStringList(_keyWeatherCardOrder, validatedOrder);
+    final validatedOrder = _normalizeCardOrder(savedOrder);
+    if (savedOrder == null ||
+        !_listEquals(savedOrder, validatedOrder.map(cardOrderToKey).toList())) {
+      await prefs.setStringList(
+        _keyWeatherCardOrder,
+        validatedOrder.map(cardOrderToKey).toList(),
+      );
     }
 
     // 更新状态
@@ -462,39 +486,54 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   /// 设置天气卡片顺序
   ///
   /// [value]: 天气卡片顺序
-  Future<void> setWeatherCardOrder(List<String> value) async {
+  Future<void> setWeatherCardOrder(List<WeatherCardType> value) async {
     // 验证并自动补全缺失卡片
-    const validOrder = ['hourly', 'daily', 'airQuality', 'details', 'indices'];
-    final validatedOrder = _normalizeCardOrder(value, validOrder);
+    final normalized = _normalize(value);
 
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_keyWeatherCardOrder, validatedOrder);
-    state = state.copyWith(weatherCardOrder: validatedOrder);
+    await prefs.setStringList(
+      _keyWeatherCardOrder,
+      normalized.map(cardOrderToKey).toList(),
+    );
+    state = state.copyWith(weatherCardOrder: normalized);
   }
 
-  List<String> _normalizeCardOrder(
-    List<String>? savedOrder,
-    List<String> validOrder,
-  ) {
+  /// 解析持久化的字符串顺序为强类型枚举，自动补全缺失卡片
+  List<WeatherCardType> _normalizeCardOrder(List<String>? savedOrder) {
     if (savedOrder == null || savedOrder.isEmpty) {
-      return List<String>.from(validOrder);
+      return List<WeatherCardType>.from(kDefaultWeatherCardOrder);
     }
 
-    final seen = <String>{};
-    final normalized = <String>[];
-    for (final card in savedOrder) {
-      if (validOrder.contains(card) && !seen.contains(card)) {
-        normalized.add(card);
-        seen.add(card);
-      }
-    }
-
-    for (final card in validOrder) {
-      if (!seen.contains(card)) {
+    final seen = <WeatherCardType>{};
+    final normalized = <WeatherCardType>[];
+    for (final key in savedOrder) {
+      final card = cardTypeFromKey(key);
+      if (card != null && seen.add(card)) {
         normalized.add(card);
       }
     }
 
+    for (final card in kDefaultWeatherCardOrder) {
+      if (seen.contains(card)) continue;
+      normalized.add(card);
+    }
+
+    return normalized;
+  }
+
+  static List<WeatherCardType> _normalize(List<WeatherCardType> value) {
+    final seen = <WeatherCardType>{};
+    final normalized = <WeatherCardType>[];
+    for (final card in value) {
+      if (seen.add(card)) {
+        normalized.add(card);
+      }
+    }
+    // 缺失卡片按默认顺序补全，保证设置里出现部分卡片时 UI 不缺项。
+    for (final card in kDefaultWeatherCardOrder) {
+      if (seen.contains(card)) continue;
+      normalized.add(card);
+    }
     return normalized;
   }
 
@@ -564,3 +603,22 @@ final settingsProvider = StateNotifierProvider<SettingsNotifier, AppSettings>((
 ) {
   return SettingsNotifier();
 });
+
+/// 将卡片枚举序列化为持久化的字符串 key
+String cardOrderToKey(WeatherCardType type) => switch (type) {
+  WeatherCardType.hourly => 'hourly',
+  WeatherCardType.daily => 'daily',
+  WeatherCardType.airQuality => 'airQuality',
+  WeatherCardType.details => 'details',
+  WeatherCardType.indices => 'indices',
+};
+
+/// 将持久化的字符串 key 还原为卡片枚举；无法识别时返回 null
+WeatherCardType? cardTypeFromKey(String? key) => switch (key) {
+  'hourly' => WeatherCardType.hourly,
+  'daily' => WeatherCardType.daily,
+  'airQuality' => WeatherCardType.airQuality,
+  'details' => WeatherCardType.details,
+  'indices' => WeatherCardType.indices,
+  _ => null,
+};

@@ -9,17 +9,19 @@ import '../../providers/weather_provider.dart';
 import '../../providers/city_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../core/constants/app_constants.dart';
-import '../../core/theme/aurora_gradient_scheme.dart';
 import '../../core/theme/app_theme.dart';
 import '../../services/caiyun_service.dart';
 import '../../widgets/hourly_forecast.dart';
 import '../../widgets/daily_forecast.dart';
+import '../../widgets/current_weather_header.dart';
+import '../../widgets/full_screen_status.dart';
 import '../../widgets/weather_alert_card.dart';
 import '../../widgets/air_quality_card.dart';
 import '../../widgets/weather_indices_card.dart';
 import '../../widgets/glass/aurora_glass_button.dart';
 import '../../widgets/glass/aurora_glass_card.dart';
 import '../../widgets/glass/aurora_glass_icon_button.dart';
+import '../../widgets/glass/glass_card_header.dart';
 
 /// 天气主页面
 ///
@@ -85,6 +87,8 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
                 },
               ),
               child: CustomScrollView(
+                // 内容不足一屏时也保持下拖，刷新指示器才能始终响应
+                physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
                   SliverToBoxAdapter(
                     child: Align(
@@ -123,12 +127,10 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
     );
   }
 
-  /// 构建当前天气显示
+  /// 构建当前天气展示区
   ///
-  /// [state]: 天气状态
-  /// [location]: 位置信息
-  /// [settings]: 应用设置
-  /// [locationState]: 定位初始化状态
+  /// 仅负责状态分流：数据就绪时交给 [CurrentWeatherHeader]，
+  /// 加载/定位/出错/空状态交给统一的状态视图。
   Widget _buildCurrentWeather(
     WeatherState state,
     Location? location,
@@ -161,208 +163,12 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
       return _buildEmptyState(viewportHeight: viewportHeight);
     }
 
-    // 获取今日天气和昼夜状态
-    final todayDaily = weather.daily.isNotEmpty ? weather.daily.first : null;
-    final isNight = WeatherCode.isNightTimeFromObsTime(
-      weather.current.obsTime,
-      sunrise: todayDaily?.sunrise,
-      sunset: todayDaily?.sunset,
-    );
-    final weatherCode = int.tryParse(weather.current.icon) ?? 100;
-    final useLightForeground =
-        settings.auroraBackgroundEnabled &&
-        WeatherGradientScheme.prefersLightForeground(
-          weatherCode,
-          isDark: Theme.of(context).brightness == Brightness.dark,
-        );
-    final foregroundColor = useLightForeground
-        ? Colors.white.withValues(alpha: 0.94)
-        : Theme.of(context).colorScheme.onSurface;
-    final mutedForegroundColor = useLightForeground
-        ? Colors.white.withValues(alpha: 0.72)
-        : Theme.of(context).colorScheme.onSurfaceVariant;
-    final dividerColor = useLightForeground
-        ? Colors.white.withValues(alpha: 0.42)
-        : Theme.of(context).colorScheme.outline;
-
-    return Container(
-      color: Colors.transparent,
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: 24,
-          right: 24,
-          bottom: 0,
-          top: 12 + MediaQuery.of(context).padding.top,
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // 城市名称
-            SizedBox(
-              height: 48,
-              child: Stack(
-                alignment: Alignment.center,
-                clipBehavior: Clip.none,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (location?.isLocated == true) ...[
-                        Icon(
-                          LucideIcons.mapPin,
-                          size: 20,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                        const SizedBox(width: 4),
-                      ],
-                      Text(
-                        location?.name ?? context.tr('未知位置'),
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(
-                              color: foregroundColor,
-                              fontWeight: FontWeight.w500,
-                            ),
-                      ),
-                    ],
-                  ),
-                  Positioned(
-                    right: 0,
-                    child: AuroraGlassIconButton(
-                      icon: LucideIcons.navigation,
-                      color: mutedForegroundColor,
-                      size: 44,
-                      iconSize: 22,
-                      preferOwnLayer: true,
-                      onPressed: _showCitySelector,
-                      tooltip: context.tr('导航'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            // 当前温度
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  WeatherCode.convertTemperature(
-                    weather.current.temp,
-                    toFahrenheit: settings.temperatureUnit == 'fahrenheit',
-                  ),
-                  style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                    color: foregroundColor,
-                    fontWeight: FontWeight.w300,
-                    fontSize: 72,
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Text(
-                    settings.temperatureUnit == 'fahrenheit' ? '°F' : '°',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.displayMedium?.copyWith(color: foregroundColor),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            // 天气状态
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  WeatherCode.getWeatherIcon(
-                    int.tryParse(weather.current.icon) ?? 100,
-                    isNight: isNight,
-                  ),
-                  size: 32,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  context.tr(weather.current.text),
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(color: foregroundColor),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // 温度信息
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (todayDaily != null) ...[
-                  _buildTempInfo(
-                    context.tr('最高'),
-                    '${WeatherCode.convertTemperature(todayDaily.tempMax, toFahrenheit: settings.temperatureUnit == 'fahrenheit')}${settings.temperatureUnit == 'fahrenheit' ? '°F' : '°'}',
-                    foregroundColor: foregroundColor,
-                    mutedForegroundColor: mutedForegroundColor,
-                  ),
-                  Container(
-                    width: 1,
-                    height: 16,
-                    margin: const EdgeInsets.symmetric(horizontal: 16),
-                    color: dividerColor,
-                  ),
-                  _buildTempInfo(
-                    context.tr('最低'),
-                    '${WeatherCode.convertTemperature(todayDaily.tempMin, toFahrenheit: settings.temperatureUnit == 'fahrenheit')}${settings.temperatureUnit == 'fahrenheit' ? '°F' : '°'}',
-                    foregroundColor: foregroundColor,
-                    mutedForegroundColor: mutedForegroundColor,
-                  ),
-                  Container(
-                    width: 1,
-                    height: 16,
-                    margin: const EdgeInsets.symmetric(horizontal: 16),
-                    color: dividerColor,
-                  ),
-                ],
-                _buildTempInfo(
-                  context.tr('体感'),
-                  '${WeatherCode.convertTemperature(weather.current.feelsLike, toFahrenheit: settings.temperatureUnit == 'fahrenheit')}${settings.temperatureUnit == 'fahrenheit' ? '°F' : '°'}',
-                  foregroundColor: foregroundColor,
-                  mutedForegroundColor: mutedForegroundColor,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// 构建温度信息项
-  ///
-  /// [label]: 标签
-  /// [value]: 值
-  Widget _buildTempInfo(
-    String label,
-    String value, {
-    Color? foregroundColor,
-    Color? mutedForegroundColor,
-  }) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color:
-                mutedForegroundColor ??
-                Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-        ),
-        Text(
-          value,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: foregroundColor,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
+    return CurrentWeatherHeader(
+      weather: weather,
+      location: location,
+      temperatureUnit: settings.temperatureUnit,
+      auroraBackgroundEnabled: settings.auroraBackgroundEnabled,
+      onLocatePressed: _showCitySelector,
     );
   }
 
@@ -425,76 +231,35 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
     String message, {
     required double viewportHeight,
   }) {
-    return SizedBox(
-      height: viewportHeight,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned.fill(child: Container(color: Colors.transparent)),
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 8,
-            right: 12,
-            child: _buildEmptyStateAction(),
+    return _buildStatusFrame(
+      viewportHeight: viewportHeight,
+      showEmptyAction: true,
+      child: FullScreenStatus(
+        icon: LucideIcons.mapPinOff,
+        iconColor: Theme.of(context).colorScheme.error,
+        title: context.tr('定位失败'),
+        titleColor: Theme.of(context).colorScheme.error,
+        message: message,
+        actions: [
+          AuroraGlassButton(
+            label: context.tr('重试'),
+            icon: LucideIcons.refreshCw,
+            onPressed: () => ref
+                .read(locationInitProvider.notifier)
+                .initLocation(force: true),
+            width: 132,
           ),
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    LucideIcons.mapPinOff,
-                    size: 64,
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    context.tr('定位失败'),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.error,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    message,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    alignment: WrapAlignment.center,
-                    children: [
-                      AuroraGlassButton(
-                        label: context.tr('重试'),
-                        icon: LucideIcons.refreshCw,
-                        onPressed: () => ref
-                            .read(locationInitProvider.notifier)
-                            .initLocation(force: true),
-                        width: 132,
-                      ),
-                      AuroraGlassButton(
-                        label: context.tr('去设置'),
-                        icon: LucideIcons.settings,
-                        onPressed: openAppSettings,
-                        width: 132,
-                      ),
-                      AuroraGlassButton(
-                        label: context.tr('选择城市'),
-                        icon: LucideIcons.search,
-                        onPressed: _showCitySelector,
-                        width: 132,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+          AuroraGlassButton(
+            label: context.tr('去设置'),
+            icon: LucideIcons.settings,
+            onPressed: openAppSettings,
+            width: 132,
+          ),
+          AuroraGlassButton(
+            label: context.tr('选择城市'),
+            icon: LucideIcons.search,
+            onPressed: _showCitySelector,
+            width: 132,
           ),
         ],
       ),
@@ -505,55 +270,21 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
   ///
   /// [message]: 错误信息
   Widget _buildErrorState(String message, {required double viewportHeight}) {
-    return SizedBox(
-      height: viewportHeight,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned.fill(child: Container(color: Colors.transparent)),
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 8,
-            right: 12,
-            child: _buildEmptyStateAction(),
-          ),
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    LucideIcons.alertCircle,
-                    size: 64,
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    context.tr('加载天气失败'),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.error,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    message,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  AuroraGlassButton(
-                    label: context.tr('重试'),
-                    icon: LucideIcons.refreshCw,
-                    onPressed: _onRefresh,
-                    width: 132,
-                  ),
-                ],
-              ),
-            ),
+    return _buildStatusFrame(
+      viewportHeight: viewportHeight,
+      showEmptyAction: true,
+      child: FullScreenStatus(
+        icon: LucideIcons.alertCircle,
+        iconColor: Theme.of(context).colorScheme.error,
+        title: context.tr('加载天气失败'),
+        titleColor: Theme.of(context).colorScheme.error,
+        message: message,
+        actions: [
+          AuroraGlassButton(
+            label: context.tr('重试'),
+            icon: LucideIcons.refreshCw,
+            onPressed: _onRefresh,
+            width: 132,
           ),
         ],
       ),
@@ -562,57 +293,47 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
 
   /// 构建空状态
   Widget _buildEmptyState({required double viewportHeight}) {
+    return _buildStatusFrame(
+      viewportHeight: viewportHeight,
+      showEmptyAction: true,
+      child: FullScreenStatus(
+        icon: LucideIcons.building2,
+        iconColor: Theme.of(context).colorScheme.outline,
+        title: context.tr('请先添加城市'),
+        titleColor: Theme.of(context).colorScheme.onSurfaceVariant,
+        message: context.tr('点击右上角“导航”按钮手动添加城市'),
+      ),
+    );
+  }
+
+  /// 状态页通用外框：占满视口 + 右上角可选导航按钮
+  Widget _buildStatusFrame({
+    required double viewportHeight,
+    required bool showEmptyAction,
+    required Widget child,
+  }) {
     return SizedBox(
       height: viewportHeight,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           Positioned.fill(child: Container(color: Colors.transparent)),
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 8,
-            right: 12,
-            child: _buildEmptyStateAction(),
-          ),
-          Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  LucideIcons.building2,
-                  size: 64,
-                  color: Theme.of(context).colorScheme.outline,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  context.tr('请先添加城市'),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  context.tr('点击右上角“导航”按钮手动添加城市'),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
+          if (showEmptyAction)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 8,
+              right: 12,
+              child: AuroraGlassIconButton(
+                onPressed: _showCitySelector,
+                tooltip: context.tr('导航'),
+                icon: LucideIcons.navigation,
+                size: 44,
+                iconSize: 22,
+                preferOwnLayer: true,
+              ),
             ),
-          ),
+          child,
         ],
       ),
-    );
-  }
-
-  Widget _buildEmptyStateAction() {
-    return AuroraGlassIconButton(
-      onPressed: _showCitySelector,
-      tooltip: context.tr('导航'),
-      icon: LucideIcons.navigation,
-      size: 44,
-      iconSize: 22,
-      preferOwnLayer: true,
     );
   }
 
@@ -647,10 +368,10 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
             const SizedBox(height: 12),
           ],
           // 根据设置的顺序显示天气卡片
-          ...order.map((key) {
+          ...order.map((type) {
             Widget? card;
-            switch (key) {
-              case 'hourly':
+            switch (type) {
+              case WeatherCardType.hourly:
                 card = HourlyForecast(
                   hourly: weather.hourly,
                   sunrise: weather.daily.isNotEmpty
@@ -664,8 +385,7 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
                       : null,
                   temperatureUnit: settings.temperatureUnit,
                 );
-                break;
-              case 'daily':
+              case WeatherCardType.daily:
                 card = DailyForecast(
                   daily: weather.daily,
                   currentWeather: weather.current,
@@ -677,24 +397,20 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
                       : null,
                   temperatureUnit: settings.temperatureUnit,
                 );
-                break;
-              case 'airQuality':
+              case WeatherCardType.airQuality:
                 if (state.airQuality != null) {
                   card = AirQualityCard(airQuality: state.airQuality!);
                 }
-                break;
-              case 'details':
+              case WeatherCardType.details:
                 card = _buildWeatherDetails(
                   weather.current,
                   weather.daily.isNotEmpty ? weather.daily.first : null,
                 );
-                break;
-              case 'indices':
+              case WeatherCardType.indices:
                 if (state.weatherIndices != null &&
                     state.weatherIndices!.isNotEmpty) {
                   card = WeatherIndicesCard(indices: state.weatherIndices!);
                 }
-                break;
             }
 
             if (card == null) return const SizedBox.shrink();
@@ -718,18 +434,9 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(
-                LucideIcons.droplet,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                context.tr('降雨预测'),
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-            ],
+          GlassCardHeader(
+            icon: LucideIcons.droplet,
+            title: context.tr('降雨预测'),
           ),
           const SizedBox(height: 8),
           Text(
