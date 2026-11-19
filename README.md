@@ -12,7 +12,8 @@
 
 ## 预览
 
-![极光天气应用界面](App_Screenshot.jpg)
+<img width="3618" height="2622" alt="App_Screenshot" src="https://github.com/user-attachments/assets/cdb474a0-6136-4ab8-89fb-8437f11ed722" />
+
 
 ## 功能特性
 
