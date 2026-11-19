@@ -4,7 +4,7 @@
 ![Platform](https://img.shields.io/badge/platform-Android%20%7C%20Windows%20%7C%20Linux%20%7C%20macOS%20%7C%20iOS%20%7C%20Web-brightgreen)
 ![Flutter](https://img.shields.io/badge/Flutter-3.41+-02569B?logo=flutter)
 
-一款使用 **Aurora UI** 构建的现代化跨平台天气应用，支持玻璃质感主题、多城市管理和 AI 天气助手。
+一款使用 Aurora UI 构建的现代化跨平台天气应用，支持Liquid Glass质感主题、多城市管理和 AI 天气助手。
 
 > ⚠️ **维护状态说明**  
 > 由于学业压力，本人暂时无暇顾及本软件的更新与维护。衷心感谢大家一直以来的支持与关注！  
