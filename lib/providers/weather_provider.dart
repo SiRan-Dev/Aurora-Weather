@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -112,6 +113,9 @@ class WeatherNotifier extends StateNotifier<WeatherState> {
   /// 加载请求计数器，用于防止并发加载时旧请求覆盖新结果
   int _loadRequestId = 0;
 
+  /// 正在加载的位置ID，用于合并同一位置的重复请求
+  String? _loadingLocationId;
+
   /// 上次缓存清理时间
   DateTime _lastCacheCleanupTime = DateTime.fromMillisecondsSinceEpoch(0);
 
@@ -122,8 +126,17 @@ class WeatherNotifier extends StateNotifier<WeatherState> {
   /// 加载指定位置的天气数据
   ///
   /// [location]: 位置信息
-  Future<void> loadWeather(Location location) async {
+  /// [force]: 为 true 时即使同一位置正在加载也重新发起请求
+  Future<void> loadWeather(Location location, {bool force = false}) async {
+    // 同一位置的请求仍在进行中时直接复用，避免首屏加载与监听器重复触发
+    if (!force &&
+        state.loadingState == WeatherLoadingState.loading &&
+        _loadingLocationId == location.id) {
+      return;
+    }
+
     final requestId = ++_loadRequestId;
+    _loadingLocationId = location.id;
 
     // 如果已有请求正在进行，仅更新 loading 状态（不清理已有数据）
     state = state.copyWith(
@@ -141,46 +154,31 @@ class WeatherNotifier extends StateNotifier<WeatherState> {
       // 并发保护：如果已有更新的请求，跳过本次结果
       if (requestId != _loadRequestId) return;
 
-      // 2. 尝试获取辅助数据，但不让它们阻塞核心数据
-      AirQuality? airQuality;
-      try {
-        airQuality = await _qweatherService.getAirQuality(location.id);
-      } catch (e) {
-        debugPrint('加载空气质量失败: $e');
-      }
-
-      CaiyunMinuteRain? minuteRain;
-      try {
-        minuteRain = await _caiyunService.getMinuteRain(
-          location.lat,
-          location.lon,
-        );
-      } catch (e) {
-        debugPrint('加载彩云天气失败: $e');
-      }
-
-      // 3. 获取生活指数数据
-      List<WeatherIndices>? weatherIndices;
-      try {
-        weatherIndices = await _qweatherService.getWeatherIndices(location.id);
-      } catch (e) {
-        debugPrint('加载生活指数失败: $e');
-      }
-
-      // 并发保护：再次检查，因为辅助数据获取可能耗时较长
-      if (requestId != _loadRequestId) return;
-
-      // 更新状态为加载完成
+      // 核心天气先发布，辅助数据不再阻塞首屏展示
       state = WeatherState(
         loadingState: WeatherLoadingState.loaded,
         weatherData: weatherData,
+      );
+      _loadingLocationId = null;
+
+      // 自动持久化缓存数据，供定时播报回退使用
+      _saveWeatherCache(location.id, weatherData);
+
+      // 2. 辅助数据并发获取，各自限制 5 秒，失败不影响核心数据
+      final (airQuality, minuteRain, weatherIndices) = await (
+        _loadOptional(_qweatherService.getAirQuality(location.id)),
+        _loadOptional(_caiyunService.getMinuteRain(location.lat, location.lon)),
+        _loadOptional(_qweatherService.getWeatherIndices(location.id)),
+      ).wait;
+
+      // 并发保护：辅助数据获取期间可能已发起新请求
+      if (requestId != _loadRequestId) return;
+
+      state = state.copyWith(
         airQuality: airQuality,
         minuteRain: minuteRain,
         weatherIndices: weatherIndices,
       );
-
-      // 自动持久化缓存数据，供定时播报回退使用
-      _saveWeatherCache(location.id, weatherData);
 
       // 清理孤儿数据（限制频率：最多每小时一次）
       final now = DateTime.now();
@@ -200,12 +198,37 @@ class WeatherNotifier extends StateNotifier<WeatherState> {
       // 并发保护：仅更新当前请求的错误状态
       if (requestId != _loadRequestId) return;
 
+      _loadingLocationId = null;
+
       // 更新状态为错误
       state = state.copyWith(
         loadingState: WeatherLoadingState.error,
         errorMessage: e.toString(),
       );
     }
+  }
+
+  /// 加载可选的辅助天气数据
+  ///
+  /// 超时或失败时返回 null，不阻塞核心天气展示。
+  Future<T?> _loadOptional<T>(Future<T> future) async {
+    try {
+      return await future.timeout(const Duration(seconds: 5));
+    } catch (e) {
+      debugPrint('加载辅助天气数据失败: $e');
+      return null;
+    }
+  }
+
+  /// 更新天气数据中记录的位置信息（例如反向地理编码补齐名称）
+  ///
+  /// 不会重新请求天气接口。
+  void updateLocationInfo(Location location) {
+    final data = state.weatherData;
+    if (data == null || data.location.id != location.id) return;
+    state = state.copyWith(
+      weatherData: data.copyWith(location: location),
+    );
   }
 
   /// 检查并发送天气预警通知
@@ -417,7 +440,7 @@ class WeatherNotifier extends StateNotifier<WeatherState> {
   Future<void> refresh() async {
     final location = _ref.read(defaultCityProvider);
     if (location != null) {
-      await loadWeather(location);
+      await loadWeather(location, force: true);
     }
   }
 
