@@ -52,6 +52,21 @@ const double kFloatingTabBarMaxWidth = 520;
 /// 滚动内容滚到底时与悬浮底栏之间保留的间距
 const double kFloatingTabBarContentGap = 16;
 
+/// 首页天气卡片之间的垂直间距
+const double kCardSpacing = 12;
+
+/// 天气卡片内部布局间距（卡片内块之间）
+const double kCardInnerSpacing = 10;
+
+/// 逐时预报「约一屏可见项数」，用于计算每项宽度
+const int kHourlyVisibleItems = 5;
+
+/// 逐时预报相邻项的横向间距
+const double kHourlyItemGap = 4;
+
+/// 卡片内网格的列数切换阈值宽度（低于该值为窄屏小列数）
+const double kGridWideThreshold = 600;
+
 /// 延伸到悬浮底栏后方的滚动视图所需的底部内边距。
 ///
 /// 底栏通过 `extendBody: true` 覆盖在页面之上，滚动视图会一直延伸
@@ -191,6 +206,27 @@ class WeatherCode {
       return fahrenheit.round().toString();
     }
     return celsius.round().toString();
+  }
+
+  /// 温度单位是否为华氏度。
+  ///
+  /// 收口 `temperatureUnit == 'fahrenheit'` 这类散落的字符串判断。
+  static bool isFahrenheit(String unit) => unit == 'fahrenheit';
+
+  /// 格式化（转换后）温度为带单位的完整字符串。
+  ///
+  /// 摄氏输出 `17°C`、华氏输出 `63°F`。用于卡片/列表等需要明确
+  /// 单位的地方；顶部大字温度视觉上更简洁，可用 [convertTemperature]
+  /// 配合裸 `°`/`°F` 自行拼接。
+  static String formatTemp(
+    String celsiusTemp, {
+    required bool toFahrenheit,
+  }) {
+    final value = convertTemperature(
+      celsiusTemp,
+      toFahrenheit: toFahrenheit,
+    );
+    return toFahrenheit ? '$value°F' : '$value°C';
   }
 
   /// Returns true if [time] is at night relative to the given sunrise/sunset.

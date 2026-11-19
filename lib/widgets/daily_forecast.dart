@@ -193,23 +193,36 @@ class _DailyItem extends StatelessWidget {
           // 温度范围
           SizedBox(
             width: 80,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  '${WeatherCode.convertTemperature(weather.tempMin, toFahrenheit: temperatureUnit == 'fahrenheit')}${temperatureUnit == 'fahrenheit' ? '°F' : '°'}',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    WeatherCode.formatTemp(
+                      weather.tempMin,
+                      toFahrenheit: WeatherCode.isFahrenheit(
+                        temperatureUnit,
+                      ),
+                    ),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '${WeatherCode.convertTemperature(weather.tempMax, toFahrenheit: temperatureUnit == 'fahrenheit')}${temperatureUnit == 'fahrenheit' ? '°F' : '°'}',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
-                ),
-              ],
+                  const SizedBox(width: 8),
+                  Text(
+                    WeatherCode.formatTemp(
+                      weather.tempMax,
+                      toFahrenheit: WeatherCode.isFahrenheit(
+                        temperatureUnit,
+                      ),
+                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

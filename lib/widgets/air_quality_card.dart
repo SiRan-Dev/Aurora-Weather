@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../app_localizations.dart';
+import '../core/constants/app_constants.dart';
 import '../models/weather_models.dart';
 import 'glass/aurora_glass_card.dart';
 import 'glass/glass_card_header.dart';
@@ -122,22 +123,26 @@ class AirQualityCard extends StatelessWidget {
       ('CO', airQuality.co, 'mg/m³'),
     ];
 
-    return Column(
-      children: [
-        Row(
-          children: pollutants
-              .take(3)
-              .map((p) => Expanded(child: _buildPollutantItem(context, p)))
-              .toList(),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: pollutants
-              .skip(3)
-              .map((p) => Expanded(child: _buildPollutantItem(context, p)))
-              .toList(),
-        ),
-      ],
+    // 窄屏 3 列、宽屏 6 列：卡片内不再被拉空。
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cols = constraints.maxWidth >= kGridWideThreshold ? 6 : 3;
+        const gap = 12.0;
+        final itemWidth =
+            (constraints.maxWidth - gap * (cols - 1)) / cols;
+
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (final p in pollutants)
+              SizedBox(
+                width: itemWidth,
+                child: _buildPollutantItem(context, p),
+              ),
+          ],
+        );
+      },
     );
   }
 

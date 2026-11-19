@@ -140,13 +140,19 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
   }) {
     // 加载中状态
     if (state.isLoading && state.weatherData == null) {
-      return _buildLoadingState(viewportHeight: viewportHeight);
+      return _buildSpinnerState(
+        context.tr('正在获取天气信息...'),
+        viewportHeight: viewportHeight,
+      );
     }
 
     final weather = state.weatherData;
     if (weather == null) {
       if (locationState.isLocating || !locationState.isInitialized) {
-        return _buildLocatingState(viewportHeight: viewportHeight);
+        return _buildSpinnerState(
+          context.tr('正在获取当前位置…'),
+          viewportHeight: viewportHeight,
+        );
       }
       if (locationState.error != null && location == null) {
         return _buildLocationErrorState(
@@ -173,7 +179,10 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
   }
 
   /// 构建天气加载中状态
-  Widget _buildLoadingState({required double viewportHeight}) {
+  /// 构建加载中 / 定位中等 spinner 状态
+  ///
+  /// [message]: 提示文案
+  Widget _buildSpinnerState(String message, {required double viewportHeight}) {
     return SizedBox(
       height: viewportHeight,
       child: Center(
@@ -187,33 +196,7 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              context.tr('正在获取天气信息...'),
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// 构建定位中状态
-  Widget _buildLocatingState({required double viewportHeight}) {
-    return SizedBox(
-      height: viewportHeight,
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(
-              width: 32,
-              height: 32,
-              child: CircularProgressIndicator(strokeWidth: 3),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              context.tr('正在获取当前位置…'),
+              message,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
@@ -349,9 +332,9 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
 
     return Padding(
       padding: EdgeInsets.only(
-        left: 12,
-        right: 12,
-        top: 12,
+        left: kCardSpacing,
+        right: kCardSpacing,
+        top: kCardSpacing,
         bottom: floatingTabBarScrollInset(context),
       ),
       child: Column(
@@ -360,12 +343,12 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
           // 天气预警（固定位置，不参与排序）
           if (weather.hasAlerts) ...[
             _buildAlertSlot(weather),
-            const SizedBox(height: 12),
+            const SizedBox(height: kCardSpacing),
           ],
           // 降雨预测
           if (state.minuteRain != null && state.minuteRain!.willRain) ...[
             _buildRainPrediction(state.minuteRain!),
-            const SizedBox(height: 12),
+            const SizedBox(height: kCardSpacing),
           ],
           // 根据设置的顺序显示天气卡片
           ...order.map((type) {
@@ -416,7 +399,7 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
             if (card == null) return const SizedBox.shrink();
 
             return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.only(bottom: kCardSpacing),
               child: card,
             );
           }),
@@ -461,90 +444,64 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
     CurrentWeather current,
     DailyWeather? todayDaily,
   ) {
+    final items = <_DetailItemData>[
+      _DetailItemData(
+        LucideIcons.wind,
+        context.tr(current.windDir),
+        context.tr('{value}级', args: {'value': current.windScale}),
+      ),
+      _DetailItemData(LucideIcons.droplet, context.tr('湿度'), '${current.humidity}%'),
+      if (todayDaily != null)
+        _DetailItemData(
+          LucideIcons.sunrise,
+          context.tr('日出'),
+          todayDaily.sunrise,
+        ),
+      _DetailItemData(LucideIcons.eye, context.tr('能见度'), '${current.vis} km'),
+      _DetailItemData(
+        LucideIcons.gauge,
+        context.tr('气压'),
+        '${current.pressure} hPa',
+      ),
+      if (todayDaily != null)
+        _DetailItemData(
+          LucideIcons.sunset,
+          context.tr('日落'),
+          todayDaily.sunset,
+        ),
+    ];
+
     return AuroraGlassCard(
       padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(
-                LucideIcons.info,
-                size: 20,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                context.tr('详细信息'),
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-              ),
-            ],
+          GlassCardHeader(
+            icon: LucideIcons.info,
+            title: context.tr('详细信息'),
+            emphasized: true,
           ),
           const SizedBox(height: 10),
-          // 第一行详情
-          Row(
-            children: [
-              Expanded(
-                child: _buildDetailItem(
-                  LucideIcons.wind,
-                  context.tr(current.windDir),
-                  context.tr('{value}级', args: {'value': current.windScale}),
-                  null,
-                ),
-              ),
-              Expanded(
-                child: _buildDetailItem(
-                  LucideIcons.droplet,
-                  context.tr('湿度'),
-                  '${current.humidity}%',
-                  null,
-                ),
-              ),
-              Expanded(
-                child: todayDaily != null
-                    ? _buildDetailItem(
-                        LucideIcons.sunrise,
-                        context.tr('日出'),
-                        todayDaily.sunrise,
-                        null,
-                      )
-                    : const SizedBox(),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          // 第二行详情
-          Row(
-            children: [
-              Expanded(
-                child: _buildDetailItem(
-                  LucideIcons.eye,
-                  context.tr('能见度'),
-                  '${current.vis} km',
-                  null,
-                ),
-              ),
-              Expanded(
-                child: _buildDetailItem(
-                  LucideIcons.gauge,
-                  context.tr('气压'),
-                  '${current.pressure} hPa',
-                  null,
-                ),
-              ),
-              Expanded(
-                child: todayDaily != null
-                    ? _buildDetailItem(
-                        LucideIcons.sunset,
-                        context.tr('日落'),
-                        todayDaily.sunset,
-                        null,
-                      )
-                    : const SizedBox(),
-              ),
-            ],
+          // 详情网格：窄屏 3 列、宽屏 6 列，卡片内不再被拉空。
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final cols = constraints.maxWidth >= kGridWideThreshold ? 6 : 3;
+              const gap = 10.0;
+              final itemWidth =
+                  (constraints.maxWidth - gap * (cols - 1)) / cols;
+
+              return Wrap(
+                spacing: gap,
+                runSpacing: gap,
+                children: [
+                  for (final item in items)
+                    SizedBox(
+                      width: itemWidth,
+                      child: _buildDetailItem(item.icon, item.label, item.value, null),
+                    ),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -589,6 +546,15 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
       ],
     );
   }
+}
+
+/// 详情卡网格项的数据载体
+class _DetailItemData {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _DetailItemData(this.icon, this.label, this.value);
 }
 
 /// 城市选择器底部弹窗
@@ -1017,15 +983,13 @@ class _CitySelectorSheetState extends ConsumerState<_CitySelectorSheet> {
                       );
                     }
                     final settings = ref.watch(settingsProvider);
-                    final convertedTemp = WeatherCode.convertTemperature(
-                      weather.current.temp,
-                      toFahrenheit: settings.temperatureUnit == 'fahrenheit',
-                    );
-                    final unit = settings.temperatureUnit == 'fahrenheit'
-                        ? '°F'
-                        : '°';
                     return Text(
-                      '$convertedTemp$unit',
+                      WeatherCode.formatTemp(
+                        weather.current.temp,
+                        toFahrenheit: WeatherCode.isFahrenheit(
+                          settings.temperatureUnit,
+                        ),
+                      ),
                       style: Theme.of(context).textTheme.titleMedium,
                     );
                   },

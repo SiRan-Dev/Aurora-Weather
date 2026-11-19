@@ -176,11 +176,9 @@ class _HourlyForecastState extends State<HourlyForecast> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final screenWidth = constraints.maxWidth;
-        const targetVisibleItems = 5;
-        const itemGap = 4.0;
         final itemWidth =
-            (screenWidth - (itemGap * (targetVisibleItems - 1))) /
-            targetVisibleItems;
+            (screenWidth - (kHourlyItemGap * (kHourlyVisibleItems - 1))) /
+            kHourlyVisibleItems;
 
         return ScrollConfiguration(
           behavior: ScrollConfiguration.of(context).copyWith(
@@ -198,11 +196,14 @@ class _HourlyForecastState extends State<HourlyForecast> {
             scrollDirection: Axis.horizontal,
             child: Row(
               mainAxisSize: MainAxisSize.min,
+              // 顶对齐：即使个别项没有降水行（占位槽存在但透明），
+              // 时间/图标/温度也在同一水平基线，不被居中对齐顶歪。
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 for (var i = 0; i < hourly.length; i++)
                   Padding(
                     padding: EdgeInsets.only(
-                      right: i < hourly.length - 1 ? itemGap : 0,
+                      right: i < hourly.length - 1 ? kHourlyItemGap : 0,
                     ),
                     child: SizedBox(
                       width: itemWidth,
@@ -277,6 +278,12 @@ class _HourlyForecastState extends State<HourlyForecast> {
   }
 }
 
+/// 逐时项降水槽的统一高度。
+///
+/// 卡片整体有降水时，即使具体小时 pop=0 也保留同高透明占位，
+/// 保证所有小时项等高、时间/图标/温度基线一致。
+const double _precipitationSlotHeight = 16;
+
 /// 小时天气预报项组件
 class _HourlyItem extends StatelessWidget {
   final HourlyWeather weather;
@@ -313,6 +320,10 @@ class _HourlyItem extends StatelessWidget {
     final hasPrecipitation =
         showPrecipitation && weather.pop != '0' && weather.pop.isNotEmpty;
 
+    // 降水槽统一高度：卡片整体有降水时，即使当前小时 pop=0 也保留
+    // 同名透明占位，确保所有小时项等高，时间/图标/温度基线一致。
+    final precipitationSlotHeight = _precipitationSlotHeight;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
@@ -322,9 +333,14 @@ class _HourlyItem extends StatelessWidget {
         _buildWeatherIcon(context, iconCode, isNight),
         const SizedBox(height: 6),
         _buildTempText(context),
-        if (hasPrecipitation) ...[
+        if (showPrecipitation) ...[
           const SizedBox(height: 6),
-          _buildPrecipitation(context),
+          SizedBox(
+            height: precipitationSlotHeight,
+            child: hasPrecipitation
+                ? _buildPrecipitation(context)
+                : const SizedBox.shrink(),
+          ),
         ],
       ],
     );
@@ -362,13 +378,11 @@ class _HourlyItem extends StatelessWidget {
   }
 
   Widget _buildTempText(BuildContext context) {
-    final convertedTemp = WeatherCode.convertTemperature(
-      weather.temp,
-      toFahrenheit: temperatureUnit == 'fahrenheit',
-    );
-    final unit = temperatureUnit == 'fahrenheit' ? '°F' : '°';
     return Text(
-      '$convertedTemp$unit',
+      WeatherCode.formatTemp(
+        weather.temp,
+        toFahrenheit: WeatherCode.isFahrenheit(temperatureUnit),
+      ),
       style: Theme.of(
         context,
       ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
@@ -376,22 +390,25 @@ class _HourlyItem extends StatelessWidget {
   }
 
   Widget _buildPrecipitation(BuildContext context) {
-    return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              LucideIcons.droplet,
-              size: 12,
-              color: Theme.of(context).colorScheme.tertiary,
-            ),
-            const SizedBox(width: 2),
-            Text(
-              '${weather.pop}%',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+    return SizedBox(
+          height: _precipitationSlotHeight,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                LucideIcons.droplet,
+                size: 12,
                 color: Theme.of(context).colorScheme.tertiary,
               ),
-            ),
-          ],
+              const SizedBox(width: 2),
+              Text(
+                '${weather.pop}%',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.tertiary,
+                ),
+              ),
+            ],
+          ),
         )
         .animate()
         .fadeIn(duration: 400.ms, curve: Curves.easeInOut)

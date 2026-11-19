@@ -128,33 +128,37 @@ class CurrentWeatherHeader extends StatelessWidget {
     BuildContext context,
     WeatherContrastColors contrast,
   ) {
-    final useF = temperatureUnit == 'fahrenheit';
+    final useF = WeatherCode.isFahrenheit(temperatureUnit);
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          WeatherCode.convertTemperature(
-            weather.current.temp,
-            toFahrenheit: useF,
+    // FittedBox：极端温度/大字体缩放时自动缩容，不再横向溢出。
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            WeatherCode.convertTemperature(
+              weather.current.temp,
+              toFahrenheit: useF,
+            ),
+            style: Theme.of(context).textTheme.displayLarge?.copyWith(
+              color: contrast.foreground,
+              fontWeight: FontWeight.w300,
+              fontSize: 72,
+            ),
           ),
-          style: Theme.of(context).textTheme.displayLarge?.copyWith(
-            color: contrast.foreground,
-            fontWeight: FontWeight.w300,
-            fontSize: 72,
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Text(
+              useF ? '°F' : '°',
+              style: Theme.of(
+                context,
+              ).textTheme.displayMedium?.copyWith(color: contrast.foreground),
+            ),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(top: 12),
-          child: Text(
-            useF ? '°F' : '°',
-            style: Theme.of(
-              context,
-            ).textTheme.displayMedium?.copyWith(color: contrast.foreground),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -198,11 +202,10 @@ class CurrentWeatherHeader extends StatelessWidget {
     DailyWeather? todayDaily,
     WeatherContrastColors contrast,
   ) {
-    final useF = temperatureUnit == 'fahrenheit';
-    final unit = useF ? '°F' : '°';
+    final useF = WeatherCode.isFahrenheit(temperatureUnit);
 
     String format(String value) {
-      return '${WeatherCode.convertTemperature(value, toFahrenheit: useF)}$unit';
+      return WeatherCode.formatTemp(value, toFahrenheit: useF);
     }
 
     return Wrap(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../app_localizations.dart';
+import '../core/constants/app_constants.dart';
 import '../models/weather_models.dart';
 import 'glass/aurora_glass_card.dart';
 import 'glass/glass_card_header.dart';
@@ -28,51 +29,26 @@ class WeatherIndicesCard extends StatelessWidget {
             title: context.tr('生活指数'),
           ),
           const SizedBox(height: 16),
-          // 两行三列布局
-          Column(
-            children: [
-              // 第一行
-              Row(
+          // 网格：窄屏 3 列、宽屏 6 列，卡片内不再被拉空。
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final cols = constraints.maxWidth >= kGridWideThreshold ? 6 : 3;
+              const gap = 12.0;
+              final itemWidth =
+                  (constraints.maxWidth - gap * (cols - 1)) / cols;
+
+              return Wrap(
+                spacing: gap,
+                runSpacing: gap,
                 children: [
-                  Expanded(child: _IndexItem(index: displayIndices[0])),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: displayIndices.length > 1
-                        ? _IndexItem(index: displayIndices[1])
-                        : const SizedBox(),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: displayIndices.length > 2
-                        ? _IndexItem(index: displayIndices[2])
-                        : const SizedBox(),
-                  ),
+                  for (final index in displayIndices)
+                    SizedBox(
+                      width: itemWidth,
+                      child: _IndexItem(index: index),
+                    ),
                 ],
-              ),
-              const SizedBox(height: 12),
-              // 第二行
-              Row(
-                children: [
-                  Expanded(
-                    child: displayIndices.length > 3
-                        ? _IndexItem(index: displayIndices[3])
-                        : const SizedBox(),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: displayIndices.length > 4
-                        ? _IndexItem(index: displayIndices[4])
-                        : const SizedBox(),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: displayIndices.length > 5
-                        ? _IndexItem(index: displayIndices[5])
-                        : const SizedBox(),
-                  ),
-                ],
-              ),
-            ],
+              );
+            },
           ),
         ],
       ),

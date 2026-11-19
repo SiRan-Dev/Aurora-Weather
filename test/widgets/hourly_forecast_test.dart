@@ -108,4 +108,28 @@ void main() {
     expect(find.textContaining('70%'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('B1: all hour items stay vertically aligned when only some hours have pop', (
+    tester,
+  ) async {
+    // 全局有降水（任一小时 pop=70），其余 pop=0：占位槽保证所有项等高，
+    // 时间标签必须全部落在同一水平线，不被居中对齐顶歪。
+    final mixed = List.generate(
+      5,
+      (i) => hourlyItem(1 + i, pop: i == 1 ? '70' : '0'),
+    );
+    await tester.pumpWidget(_harness(HourlyForecast(hourly: mixed)));
+    await tester.pumpAndSettle();
+
+    final timeFinder = find.textContaining(':00');
+    final count = tester.widgetList(timeFinder).length;
+    expect(count, greaterThanOrEqualTo(5), reason: '应渲染至少 5 个时间标签');
+
+    final tops = <double>[
+      for (var i = 0; i < count; i++) tester.getTopLeft(timeFinder.at(i)).dy,
+    ];
+    expect(tops.toSet().length, 1, reason: '所有时间标签应在同一水平线');
+
+    expect(tester.takeException(), isNull);
+  });
 }
