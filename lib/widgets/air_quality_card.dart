@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../app_localizations.dart';
 import '../models/weather_models.dart';
 import 'glass/aurora_glass_card.dart';
+import 'glass/glass_card_header.dart';
 
 /// 空气质量卡片组件
 ///
@@ -24,22 +25,9 @@ class AirQualityCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 头部
-          Row(
-            children: [
-              Icon(
-                LucideIcons.wind,
-                size: 20,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                context.tr('空气质量'),
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
-              ),
-            ],
+          GlassCardHeader(
+            icon: LucideIcons.wind,
+            title: context.tr('空气质量'),
           ),
           const SizedBox(height: 10),
           // AQI指数和空气质量等级

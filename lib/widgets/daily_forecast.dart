@@ -6,6 +6,7 @@ import '../app_localizations.dart';
 import '../models/weather_models.dart';
 import '../core/constants/app_constants.dart';
 import 'glass/aurora_glass_card.dart';
+import 'glass/glass_card_header.dart';
 
 /// 7天天气预报组件
 ///
@@ -51,22 +52,9 @@ class DailyForecast extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 头部
-          Row(
-            children: [
-              Icon(
-                LucideIcons.calendar,
-                size: 20,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                context.tr('7天预报'),
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
-              ),
-            ],
+          GlassCardHeader(
+            icon: LucideIcons.calendar,
+            title: context.tr('7天预报'),
           ),
           const SizedBox(height: 12),
           // 每日预报列表

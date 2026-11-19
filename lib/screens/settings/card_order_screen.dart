@@ -32,49 +32,48 @@ class _CardOrderBottomSheet extends ConsumerStatefulWidget {
 }
 
 class _CardOrderBottomSheetState extends ConsumerState<_CardOrderBottomSheet> {
-  late List<String> _currentOrder;
+  late List<WeatherCardType> _currentOrder;
 
   @override
   void initState() {
     super.initState();
-    const validOrder = ['hourly', 'daily', 'airQuality', 'details', 'indices'];
     final savedOrder = ref.read(settingsProvider).weatherCardOrder;
 
     final hasAllValidCards = savedOrder.every(
-      (card) => validOrder.contains(card),
+      (card) => kDefaultWeatherCardOrder.contains(card),
     );
-    final hasCorrectLength = savedOrder.length == validOrder.length;
+    final hasCorrectLength = savedOrder.length == kDefaultWeatherCardOrder.length;
 
     _currentOrder = hasAllValidCards && hasCorrectLength
         ? List.from(savedOrder)
-        : List.from(validOrder);
+        : List.from(kDefaultWeatherCardOrder);
   }
 
   @override
   Widget build(BuildContext context) {
     final cardInfo =
-        <String, ({String title, IconData icon, String description})>{
-          'hourly': (
+        <WeatherCardType, ({String title, IconData icon, String description})>{
+          WeatherCardType.hourly: (
             title: context.tr('24小时预报'),
             icon: LucideIcons.clock,
             description: context.tr('显示未来24小时的天气变化趋势'),
           ),
-          'daily': (
+          WeatherCardType.daily: (
             title: context.tr('7天预报'),
             icon: LucideIcons.calendar,
             description: context.tr('显示未来7天的天气概况'),
           ),
-          'airQuality': (
+          WeatherCardType.airQuality: (
             title: context.tr('空气质量'),
             icon: LucideIcons.wind,
             description: context.tr('显示当前空气质量指数和污染物信息'),
           ),
-          'details': (
+          WeatherCardType.details: (
             title: context.tr('详细信息'),
             icon: LucideIcons.info,
             description: context.tr('显示湿度、气压、能见度等详细数据'),
           ),
-          'indices': (
+          WeatherCardType.indices: (
             title: context.tr('生活指数'),
             icon: LucideIcons.lightbulb,
             description: context.tr('显示穿衣、运动、洗车等生活建议'),
@@ -125,11 +124,8 @@ class _CardOrderBottomSheetState extends ConsumerState<_CardOrderBottomSheet> {
             shrinkWrap: true,
             padding: const EdgeInsets.symmetric(vertical: 8),
             itemCount: _currentOrder.length,
-            onReorder: (oldIndex, newIndex) {
+            onReorderItem: (oldIndex, newIndex) {
               setState(() {
-                if (oldIndex < newIndex) {
-                  newIndex -= 1;
-                }
                 final item = _currentOrder.removeAt(oldIndex);
                 _currentOrder.insert(newIndex, item);
               });
@@ -171,7 +167,7 @@ class _CardOrderBottomSheetState extends ConsumerState<_CardOrderBottomSheet> {
 
   void _resetOrder() {
     setState(() {
-      _currentOrder = ['hourly', 'daily', 'airQuality', 'details', 'indices'];
+      _currentOrder = List.from(kDefaultWeatherCardOrder);
     });
     ref.read(settingsProvider.notifier).setWeatherCardOrder(_currentOrder);
   }
