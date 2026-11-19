@@ -8,6 +8,7 @@ import '../providers/city_provider.dart';
 import '../providers/weather_provider.dart';
 import '../providers/settings_provider.dart';
 import '../core/constants/app_constants.dart';
+import '../core/platform/platform_capabilities.dart';
 import '../core/theme/aurora_background.dart';
 import '../services/notification_service.dart';
 import 'weather/weather_screen.dart';
@@ -67,18 +68,21 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       );
     }
 
-    final hasNotificationPermission = await notificationServiceProvider
-        .requestNotificationPermission();
-    if (!mounted) return;
+    // 不支持系统通知的平台（Web、Windows）不弹通知权限提示。
+    if (supportsSystemNotifications) {
+      final hasNotificationPermission = await notificationServiceProvider
+          .requestNotificationPermission();
+      if (!mounted) return;
 
-    if (!hasNotificationPermission) {
-      _showPermissionDialog(
-        context.tr('通知权限'),
-        context.tr('极光天气需要通知权限来推送天气预警信息。请在设置中授予通知权限。'),
-      );
+      if (!hasNotificationPermission) {
+        _showPermissionDialog(
+          context.tr('通知权限'),
+          context.tr('极光天气需要通知权限来推送天气预警信息。请在设置中授予通知权限。'),
+        );
+      }
+
+      await notificationServiceProvider.markNotificationPermissionRequested();
     }
-
-    await notificationServiceProvider.markNotificationPermissionRequested();
   }
 
   /// 显示权限请求对话框
