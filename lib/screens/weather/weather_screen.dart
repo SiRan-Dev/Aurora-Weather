@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'dart:ui';
 import '../../app_localizations.dart';
 import '../../models/weather_models.dart';
@@ -96,6 +97,7 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
                           weatherState,
                           defaultCity,
                           ref.watch(settingsProvider),
+                          locationState: ref.watch(locationInitProvider),
                           viewportHeight: constraints.maxHeight,
                         ),
                       ),
@@ -126,22 +128,30 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
   /// [state]: 天气状态
   /// [location]: 位置信息
   /// [settings]: 应用设置
+  /// [locationState]: 定位初始化状态
   Widget _buildCurrentWeather(
     WeatherState state,
     Location? location,
     AppSettings settings, {
+    required LocationInitState locationState,
     required double viewportHeight,
   }) {
     // 加载中状态
     if (state.isLoading && state.weatherData == null) {
-      return Container(
-        color: Colors.transparent,
-        child: const SizedBox.shrink(),
-      );
+      return _buildLoadingState(viewportHeight: viewportHeight);
     }
 
     final weather = state.weatherData;
     if (weather == null) {
+      if (locationState.isLocating || !locationState.isInitialized) {
+        return _buildLocatingState(viewportHeight: viewportHeight);
+      }
+      if (locationState.error != null && location == null) {
+        return _buildLocationErrorState(
+          locationState.error!,
+          viewportHeight: viewportHeight,
+        );
+      }
       if (state.errorMessage != null) {
         return _buildErrorState(
           state.errorMessage!,
@@ -353,6 +363,141 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  /// 构建天气加载中状态
+  Widget _buildLoadingState({required double viewportHeight}) {
+    return SizedBox(
+      height: viewportHeight,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(
+              width: 32,
+              height: 32,
+              child: CircularProgressIndicator(strokeWidth: 3),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              context.tr('正在获取天气信息...'),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 构建定位中状态
+  Widget _buildLocatingState({required double viewportHeight}) {
+    return SizedBox(
+      height: viewportHeight,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(
+              width: 32,
+              height: 32,
+              child: CircularProgressIndicator(strokeWidth: 3),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              context.tr('正在获取当前位置…'),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 构建定位失败状态
+  ///
+  /// [message]: 错误信息
+  Widget _buildLocationErrorState(
+    String message, {
+    required double viewportHeight,
+  }) {
+    return SizedBox(
+      height: viewportHeight,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(child: Container(color: Colors.transparent)),
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 8,
+            right: 12,
+            child: _buildEmptyStateAction(),
+          ),
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    LucideIcons.mapPinOff,
+                    size: 64,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    context.tr('定位失败'),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.error,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    message,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    alignment: WrapAlignment.center,
+                    children: [
+                      AuroraGlassButton(
+                        label: context.tr('重试'),
+                        icon: LucideIcons.refreshCw,
+                        onPressed: () => ref
+                            .read(locationInitProvider.notifier)
+                            .initLocation(force: true),
+                        width: 132,
+                      ),
+                      AuroraGlassButton(
+                        label: context.tr('去设置'),
+                        icon: LucideIcons.settings,
+                        onPressed: openAppSettings,
+                        width: 132,
+                      ),
+                      AuroraGlassButton(
+                        label: context.tr('选择城市'),
+                        icon: LucideIcons.search,
+                        onPressed: _showCitySelector,
+                        width: 132,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
