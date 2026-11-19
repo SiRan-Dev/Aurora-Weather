@@ -8,6 +8,7 @@ import '../providers/city_provider.dart';
 import '../providers/weather_provider.dart';
 import '../providers/settings_provider.dart';
 import '../core/constants/app_constants.dart';
+import '../core/platform/platform_capabilities.dart';
 import '../core/theme/aurora_background.dart';
 import '../services/notification_service.dart';
 import 'weather/weather_screen.dart';
@@ -67,18 +68,21 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       );
     }
 
-    final hasNotificationPermission = await notificationServiceProvider
-        .requestNotificationPermission();
-    if (!mounted) return;
+    // 不支持系统通知的平台（Web、Windows）不弹通知权限提示。
+    if (supportsSystemNotifications) {
+      final hasNotificationPermission = await notificationServiceProvider
+          .requestNotificationPermission();
+      if (!mounted) return;
 
-    if (!hasNotificationPermission) {
-      _showPermissionDialog(
-        context.tr('通知权限'),
-        context.tr('极光天气需要通知权限来推送天气预警信息。请在设置中授予通知权限。'),
-      );
+      if (!hasNotificationPermission) {
+        _showPermissionDialog(
+          context.tr('通知权限'),
+          context.tr('极光天气需要通知权限来推送天气预警信息。请在设置中授予通知权限。'),
+        );
+      }
+
+      await notificationServiceProvider.markNotificationPermissionRequested();
     }
-
-    await notificationServiceProvider.markNotificationPermissionRequested();
   }
 
   /// 显示权限请求对话框
@@ -244,52 +248,101 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           )
         : ColoredBox(color: Theme.of(context).colorScheme.surface);
 
-    return GlassPage(
-      background: background,
-      child: Scaffold(
-        // The floating bar overlays the page like a native iOS tab bar.
-        // Scrollable content extends behind it and reserves its own bottom
-        // inset so the last item can still scroll clear of the bar.
-        extendBody: true,
-        // 页面级玻璃层会把共享层的玻璃形状统一绘制，IndexedStack 只画
-        // 选中页也拦不住未选中页里的玻璃控件（例如助手页的发送按钮会
-        // 浮到天气页上）。隔离后每个玻璃控件都使用自己页面子树内的独立
-        // 层，未选中页的玻璃就不会再被绘制出来。
-        body: GlassIsolationScope(
-          isolated: true,
-          child: IndexedStack(index: _currentIndex, children: screens),
-        ),
-        bottomNavigationBar: SafeArea(
-          top: false,
-          minimum: const EdgeInsets.fromLTRB(
-            kFloatingTabBarHorizontalMargin,
-            0,
-            kFloatingTabBarHorizontalMargin,
-            12,
-          ),
-          child: Center(
-            heightFactor: 1,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: kFloatingTabBarMaxWidth,
-              ),
-              child: GlassTabBar.bottom(
-                tabs: tabs,
-                selectedIndex: _currentIndex,
-                horizontalPadding: 0,
-                verticalPadding: 0,
-                barHeight: kFloatingTabBarHeight,
-                barBorderRadius: 30,
-                onTabSelected: (index) {
-                  setState(() {
-                    _currentIndex = index;
-                  });
-                },
-              ),
-            ),
+    final glassEnabled = appSettings.liquidGlassEnabled;
+
+    final scaffold = Scaffold(
+      // 悬浮玻璃底栏覆盖在页面内容之上（原生 iOS 风格），滚动内容
+      // 通过自己的底部内边距让最后一项能滚到底栏上方。
+      // 关闭玻璃后恢复成 Material 默认底栏，此时内容不再延伸到
+      // 底栏后方，和改版前的行为一致。
+      extendBody: glassEnabled,
+      // 页面级玻璃层会把共享层的玻璃形状统一绘制，IndexedStack 只画
+      // 选中页也拦不住未选中页里的玻璃控件（例如助手页的发送按钮会
+      // 浮到天气页上）。隔离后每个玻璃控件都使用自己页面子树内的独立
+      // 层，未选中页的玻璃就不会再被绘制出来。
+      body: glassEnabled
+          ? GlassIsolationScope(
+              isolated: true,
+              child: IndexedStack(index: _currentIndex, children: screens),
+            )
+          : IndexedStack(index: _currentIndex, children: screens),
+      bottomNavigationBar: glassEnabled
+          ? _buildFloatingTabBar(context, tabs)
+          : _buildMaterialTabBar(context, tabs),
+    );
+
+    if (glassEnabled) {
+      return GlassPage(background: background, child: scaffold);
+    }
+
+    // 关闭液态玻璃时不再使用 GlassPage，直接把背景铺在页面后方，
+    // 避免插件做任何背景采样或着色器渲染，性能弱的平台更流畅。
+    return Stack(
+      fit: StackFit.expand,
+      children: [background, scaffold],
+    );
+  }
+
+  /// 构建悬浮玻璃底栏。
+  Widget _buildFloatingTabBar(BuildContext context, List<GlassTab> tabs) {
+    return SafeArea(
+      top: false,
+      minimum: const EdgeInsets.fromLTRB(
+        kFloatingTabBarHorizontalMargin,
+        0,
+        kFloatingTabBarHorizontalMargin,
+        12,
+      ),
+      child: Center(
+        heightFactor: 1,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: kFloatingTabBarMaxWidth),
+          child: GlassTabBar.bottom(
+            tabs: tabs,
+            selectedIndex: _currentIndex,
+            horizontalPadding: 0,
+            verticalPadding: 0,
+            barHeight: kFloatingTabBarHeight,
+            barBorderRadius: 30,
+            onTabSelected: _onTabSelected,
           ),
         ),
       ),
     );
+  }
+
+  /// 关闭 Liquid Glass 后恢复成改版前的 Material 默认底栏。
+  ///
+  /// 顶部保留一条细分隔线，样式与 Liquid Glass 改版前一致。
+  Widget _buildMaterialTabBar(BuildContext context, List<GlassTab> tabs) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          height: 0.5,
+          color: Theme.of(
+            context,
+          ).colorScheme.outlineVariant.withValues(alpha: 0.3),
+        ),
+        NavigationBar(
+          selectedIndex: _currentIndex,
+          onDestinationSelected: _onTabSelected,
+          destinations: [
+            for (final tab in tabs)
+              NavigationDestination(
+                icon: tab.icon ?? const SizedBox.shrink(),
+                selectedIcon: tab.activeIcon,
+                label: tab.label ?? '',
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  void _onTabSelected(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
   }
 }

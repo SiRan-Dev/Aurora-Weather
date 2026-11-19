@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import '../../core/theme/app_theme.dart';
+import '../../providers/settings_provider.dart';
 
 /// Aurora UI 的 Liquid Glass 文字按钮。
 ///
 /// [expanded] 为 true 时会占满父级宽度；否则按内容自适应，
 /// 也可以通过 [width] 指定固定宽度。
-class AuroraGlassButton extends StatelessWidget {
+///
+/// 用户关闭 Liquid Glass 后改为普通的半透明圆角按钮，
+/// 尺寸和布局保持不变。
+class AuroraGlassButton extends ConsumerWidget {
   /// 按钮文字
   final String label;
 
@@ -39,9 +45,11 @@ class AuroraGlassButton extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
-    final hasGlassScope = LiquidGlassScope.of(context) != null;
+    final glassEnabled = ref.watch(
+      settingsProvider.select((settings) => settings.liquidGlassEnabled),
+    );
 
     final content = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -65,6 +73,31 @@ class AuroraGlassButton extends StatelessWidget {
         ],
       ),
     );
+
+    if (!glassEnabled) {
+      final tokens = context.uiTokens;
+      return SizedBox(
+        width: expanded ? double.infinity : width,
+        height: height,
+        child: TextButton(
+          onPressed: onPressed,
+          style: TextButton.styleFrom(
+            backgroundColor: tokens.cardBackground,
+            foregroundColor: colorScheme.onSurface,
+            padding: EdgeInsets.zero,
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: tokens.cardBorder),
+            ),
+          ),
+          child: content,
+        ),
+      );
+    }
+
+    final hasGlassScope = LiquidGlassScope.of(context) != null;
 
     final button = GlassButton.custom(
       onTap: onPressed ?? () {},

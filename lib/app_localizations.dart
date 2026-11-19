@@ -73,6 +73,9 @@ class AppLocalizations {
     '极光背景': 'Aurora Background',
     '随天气变化的动态渐变背景；关闭后使用纯色背景':
         'Dynamic gradient background that follows the weather; uses a solid background when off.',
+    'Liquid Glass 玻璃效果': 'Liquid Glass Effects',
+    '卡片、按钮和底栏使用液态玻璃质感；关闭后改用普通半透明表面，在 Windows 等平台更流畅':
+        'Use liquid glass for cards, buttons and the tab bar; switch off for plain translucent surfaces and better performance on Windows and other platforms.',
     'A屏黑主题': 'AMOLED Black Theme',
     '纯黑背景，更适合AMOLED屏幕': 'Pure black background, better for AMOLED displays.',
     '主题颜色': 'Theme Color',

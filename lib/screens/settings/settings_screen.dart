@@ -9,6 +9,7 @@ import '../../app_localizations.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/weather_provider.dart';
+import '../../core/platform/platform_capabilities.dart';
 import '../../core/theme/app_theme.dart';
 import '../../services/notification_service.dart';
 import '../../services/live_update_diagnostics_service.dart';
@@ -92,164 +93,178 @@ class SettingsScreen extends ConsumerWidget {
                                       .setAuroraBackgroundEnabled(value);
                                 },
                               ),
-                            ],
-                          ),
-                          // 通知设置组
-                          SettingsSection(
-                            title: '通知',
-                            icon: LucideIcons.bell,
-                            titleColor: weatherContrast.accent,
-                            animationDelay: 50,
-                            children: [
                               SettingsSwitchTile(
-                                icon: LucideIcons.alertTriangle,
-                                title: '天气预警通知',
-                                subtitle: '接收极端天气预警推送',
-                                value: appSettings.notificationsEnabled,
-                                onChanged: (value) async {
-                                  if (value) {
-                                    final hasPermission =
-                                        await notificationServiceProvider
-                                            .requestNotificationPermission();
-                                    if (!hasPermission) {
-                                      if (context.mounted) {
-                                        _showPermissionDeniedDialog(context);
-                                      }
-                                      return;
-                                    }
-                                  }
+                                icon: LucideIcons.droplets,
+                                title: 'Liquid Glass 玻璃效果',
+                                subtitle:
+                                    '卡片、按钮和底栏使用液态玻璃质感；关闭后改用普通半透明表面，'
+                                    '在 Windows 等平台更流畅',
+                                value: appSettings.liquidGlassEnabled,
+                                onChanged: (value) {
                                   ref
                                       .read(settingsProvider.notifier)
-                                      .setNotificationsEnabled(value);
+                                      .setLiquidGlassEnabled(value);
                                 },
                               ),
-                              if (!kIsWeb &&
-                                  defaultTargetPlatform ==
-                                      TargetPlatform.android)
+                            ],
+                          ),
+                          // 通知设置组（仅显示支持系统通知的平台）
+                          if (supportsSystemNotifications)
+                            SettingsSection(
+                              title: '通知',
+                              icon: LucideIcons.bell,
+                              titleColor: weatherContrast.accent,
+                              animationDelay: 50,
+                              children: [
                                 SettingsSwitchTile(
-                                  icon: LucideIcons.refreshCw,
-                                  title: '实时更新通知',
-                                  subtitle: 'Android 16+ 在通知栏持续显示当前天气',
-                                  value: appSettings
-                                      .androidLiveUpdateNotificationEnabled,
+                                  icon: LucideIcons.alertTriangle,
+                                  title: '天气预警通知',
+                                  subtitle: '接收极端天气预警推送',
+                                  value: appSettings.notificationsEnabled,
                                   onChanged: (value) async {
-                                    final msgPermissionDenied = context.tr(
-                                      '未授予通知权限',
-                                    );
-                                    final msgUnsupported = context.tr(
-                                      '当前系统不支持实时更新通知（需 Android 16+）',
-                                    );
-                                    final msgUnsupportedSnack = context.tr(
-                                      '该功能仅支持 Android 16 及以上系统',
-                                    );
-                                    final msgPromotedDenied = context.tr(
-                                      '系统未允许应用发布 Promoted 实时更新通知',
-                                    );
                                     if (value) {
                                       final hasPermission =
                                           await notificationServiceProvider
                                               .requestNotificationPermission();
                                       if (!hasPermission) {
-                                        liveUpdateDiagnosticsService.record(
-                                          scene: 'settings_toggle',
-                                          success: false,
-                                          code:
-                                              'NOTIFICATION_PERMISSION_DENIED',
-                                          message: msgPermissionDenied,
-                                          settingEnabled: true,
-                                          isAndroid: true,
-                                          notificationPermission: false,
-                                        );
                                         if (context.mounted) {
                                           _showPermissionDeniedDialog(context);
                                         }
                                         return;
                                       }
-
-                                      final isSupported =
-                                          await notificationServiceProvider
-                                              .isAndroidLiveUpdateSupported();
-                                      if (!isSupported) {
-                                        liveUpdateDiagnosticsService.record(
-                                          scene: 'settings_toggle',
-                                          success: false,
-                                          code: 'ANDROID_VERSION_UNSUPPORTED',
-                                          message: msgUnsupported,
-                                          settingEnabled: true,
-                                          isAndroid: true,
-                                          isSupported: false,
-                                        );
-                                        if (context.mounted) {
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            SnackBar(
-                                              content: Text(
-                                                msgUnsupportedSnack,
-                                              ),
-                                            ),
-                                          );
-                                        }
-                                        return;
-                                      }
-
-                                      final canPostPromoted =
-                                          await notificationServiceProvider
-                                              .canPostPromotedNotifications();
-                                      if (!canPostPromoted) {
-                                        liveUpdateDiagnosticsService.record(
-                                          scene: 'settings_toggle',
-                                          success: false,
-                                          code: 'PROMOTED_PERMISSION_DENIED',
-                                          message: msgPromotedDenied,
-                                          settingEnabled: true,
-                                          isAndroid: true,
-                                          isSupported: true,
-                                          promotedPermission: false,
-                                        );
-                                        if (context.mounted) {
-                                          _showPromotedNotificationDisabledDialog(
-                                            context,
-                                          );
-                                        }
-                                        return;
-                                      }
                                     }
-
-                                    await ref
+                                    ref
                                         .read(settingsProvider.notifier)
-                                        .setAndroidLiveUpdateNotificationEnabled(
-                                          value,
-                                        );
-                                    await ref
-                                        .read(weatherProvider.notifier)
-                                        .syncAndroidLiveUpdateNotificationWithSettings(
-                                          scene: value
-                                              ? 'settings_toggle_on'
-                                              : 'settings_toggle_off',
-                                        );
+                                        .setNotificationsEnabled(value);
                                   },
                                 ),
-                              SettingsListTile(
-                                icon: LucideIcons.clock,
-                                title: '定时播报',
-                                subtitle: '设置每日定时推送天气信息',
-                                onTap: () =>
-                                    ScheduledBroadcastScreen.show(context, ref),
-                              ),
-                              if (kDebugMode &&
-                                  !kIsWeb &&
-                                  defaultTargetPlatform ==
-                                      TargetPlatform.android)
+                                if (!kIsWeb &&
+                                    defaultTargetPlatform ==
+                                        TargetPlatform.android)
+                                  SettingsSwitchTile(
+                                    icon: LucideIcons.refreshCw,
+                                    title: '实时更新通知',
+                                    subtitle: 'Android 16+ 在通知栏持续显示当前天气',
+                                    value: appSettings
+                                        .androidLiveUpdateNotificationEnabled,
+                                    onChanged: (value) async {
+                                      final msgPermissionDenied = context.tr(
+                                        '未授予通知权限',
+                                      );
+                                      final msgUnsupported = context.tr(
+                                        '当前系统不支持实时更新通知（需 Android 16+）',
+                                      );
+                                      final msgUnsupportedSnack = context.tr(
+                                        '该功能仅支持 Android 16 及以上系统',
+                                      );
+                                      final msgPromotedDenied = context.tr(
+                                        '系统未允许应用发布 Promoted 实时更新通知',
+                                      );
+                                      if (value) {
+                                        final hasPermission =
+                                            await notificationServiceProvider
+                                                .requestNotificationPermission();
+                                        if (!hasPermission) {
+                                          liveUpdateDiagnosticsService.record(
+                                            scene: 'settings_toggle',
+                                            success: false,
+                                            code:
+                                                'NOTIFICATION_PERMISSION_DENIED',
+                                            message: msgPermissionDenied,
+                                            settingEnabled: true,
+                                            isAndroid: true,
+                                            notificationPermission: false,
+                                          );
+                                          if (context.mounted) {
+                                            _showPermissionDeniedDialog(context);
+                                          }
+                                          return;
+                                        }
+
+                                        final isSupported =
+                                            await notificationServiceProvider
+                                                .isAndroidLiveUpdateSupported();
+                                        if (!isSupported) {
+                                          liveUpdateDiagnosticsService.record(
+                                            scene: 'settings_toggle',
+                                            success: false,
+                                            code: 'ANDROID_VERSION_UNSUPPORTED',
+                                            message: msgUnsupported,
+                                            settingEnabled: true,
+                                            isAndroid: true,
+                                            isSupported: false,
+                                          );
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  msgUnsupportedSnack,
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                          return;
+                                        }
+
+                                        final canPostPromoted =
+                                            await notificationServiceProvider
+                                                .canPostPromotedNotifications();
+                                        if (!canPostPromoted) {
+                                          liveUpdateDiagnosticsService.record(
+                                            scene: 'settings_toggle',
+                                            success: false,
+                                            code: 'PROMOTED_PERMISSION_DENIED',
+                                            message: msgPromotedDenied,
+                                            settingEnabled: true,
+                                            isAndroid: true,
+                                            isSupported: true,
+                                            promotedPermission: false,
+                                          );
+                                          if (context.mounted) {
+                                            _showPromotedNotificationDisabledDialog(
+                                              context,
+                                            );
+                                          }
+                                          return;
+                                        }
+                                      }
+
+                                      await ref
+                                          .read(settingsProvider.notifier)
+                                          .setAndroidLiveUpdateNotificationEnabled(
+                                            value,
+                                          );
+                                      await ref
+                                          .read(weatherProvider.notifier)
+                                          .syncAndroidLiveUpdateNotificationWithSettings(
+                                            scene: value
+                                                ? 'settings_toggle_on'
+                                                : 'settings_toggle_off',
+                                          );
+                                    },
+                                  ),
                                 SettingsListTile(
-                                  icon: LucideIcons.bug,
-                                  title: '实时更新诊断面板',
-                                  subtitle: '仅 Debug 版本可见，查看失败卡点',
+                                  icon: LucideIcons.clock,
+                                  title: '定时播报',
+                                  subtitle: '设置每日定时推送天气信息',
                                   onTap: () =>
-                                      _showLiveUpdateDiagnosticsPanel(context),
+                                      ScheduledBroadcastScreen.show(context, ref),
                                 ),
-                            ],
-                          ),
+                                if (kDebugMode &&
+                                    !kIsWeb &&
+                                    defaultTargetPlatform ==
+                                        TargetPlatform.android)
+                                  SettingsListTile(
+                                    icon: LucideIcons.bug,
+                                    title: '实时更新诊断面板',
+                                    subtitle: '仅 Debug 版本可见，查看失败卡点',
+                                    onTap: () =>
+                                        _showLiveUpdateDiagnosticsPanel(context),
+                                  ),
+                              ],
+                            ),
                           // 显示设置组
                           SettingsSection(
                             title: '显示',
@@ -370,26 +385,27 @@ class SettingsScreen extends ConsumerWidget {
                               ),
                             ],
                           ),
-                          // 高级设置组
-                          SettingsSection(
-                            title: '高级',
-                            icon: LucideIcons.slidersHorizontal,
-                            titleColor: weatherContrast.accent,
-                            animationDelay: 250,
-                            children: [
-                              SettingsSwitchTile(
-                                icon: LucideIcons.hand,
-                                title: '预测式返回手势',
-                                subtitle: '返回时显示预览动画（Android 14+）',
-                                value: appSettings.predictiveBackEnabled,
-                                onChanged: (value) {
-                                  ref
-                                      .read(settingsProvider.notifier)
-                                      .setPredictiveBackEnabled(value);
-                                },
-                              ),
-                            ],
-                          ),
+                          // 高级设置组（预测式返回仅 Android 14+ 有效）
+                          if (supportsPredictiveBack)
+                            SettingsSection(
+                              title: '高级',
+                              icon: LucideIcons.slidersHorizontal,
+                              titleColor: weatherContrast.accent,
+                              animationDelay: 250,
+                              children: [
+                                SettingsSwitchTile(
+                                  icon: LucideIcons.hand,
+                                  title: '预测式返回手势',
+                                  subtitle: '返回时显示预览动画（Android 14+）',
+                                  value: appSettings.predictiveBackEnabled,
+                                  onChanged: (value) {
+                                    ref
+                                        .read(settingsProvider.notifier)
+                                        .setPredictiveBackEnabled(value);
+                                  },
+                                ),
+                              ],
+                            ),
                           // 关于设置组
                           SettingsSection(
                             title: '关于',
