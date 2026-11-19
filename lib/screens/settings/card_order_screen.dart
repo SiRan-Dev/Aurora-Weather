@@ -3,7 +3,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app_localizations.dart';
 import '../../providers/settings_provider.dart';
-import '../../core/theme/app_theme.dart';
+import '../../widgets/glass/aurora_glass_button.dart';
+import '../../widgets/glass/aurora_glass_card.dart';
+import '../../widgets/glass/aurora_glass_icon_button.dart';
 import '../../widgets/settings/settings.dart';
 
 /// 天气卡片排序页面
@@ -84,24 +86,17 @@ class _CardOrderBottomSheetState extends ConsumerState<_CardOrderBottomSheet> {
 
     return SettingsBottomSheet(
       title: '天气卡片排序',
-      bottomAction: SizedBox(
-        width: double.infinity,
-        child: FilledButton(
-          onPressed: () => Navigator.pop(context),
-          style: FilledButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          child: Text(context.tr('完成')),
-        ),
+      bottomAction: AuroraGlassButton(
+        label: context.tr('完成'),
+        onPressed: () => Navigator.pop(context),
+        expanded: true,
+        height: 52,
       ),
       children: [
         Align(
           alignment: Alignment.centerRight,
-          child: IconButton(
-            icon: const Icon(LucideIcons.undo2),
+          child: AuroraGlassIconButton(
+            icon: LucideIcons.undo2,
             tooltip: context.tr('恢复默认'),
             onPressed: _resetOrder,
           ),
@@ -189,14 +184,9 @@ class _InfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return AuroraGlassCard(
       padding: const EdgeInsets.all(16),
       margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: context.uiTokens.cardBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.uiTokens.cardBorder),
-      ),
       child: child,
     );
   }
@@ -222,14 +212,9 @@ class _ReorderableCardItem extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Container(
-      clipBehavior: Clip.antiAlias,
+    return AuroraGlassCard(
+      padding: EdgeInsets.zero,
       margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: context.uiTokens.cardBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.uiTokens.cardBorder),
-      ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(

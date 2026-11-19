@@ -11,6 +11,8 @@ import '../../providers/weather_provider.dart';
 import '../../providers/city_provider.dart';
 import '../../models/weather_models.dart';
 import '../../core/theme/app_theme.dart';
+import '../../widgets/glass/aurora_glass_card.dart';
+import '../../widgets/glass/aurora_glass_icon_button.dart';
 
 /// 天气助手屏幕
 class AIAssistantScreen extends ConsumerStatefulWidget {
@@ -253,7 +255,10 @@ class _AIAssistantScreenState extends ConsumerState<AIAssistantScreen> {
     final weatherCode = weatherState.weatherData != null
         ? int.tryParse(weatherState.weatherData!.current.icon) ?? 100
         : null;
-    final weatherContrast = context.weatherContrastColorsFor(weatherCode);
+    final weatherContrast = context.weatherContrastColorsFor(
+      weatherCode,
+      useWeatherContrast: aiSettings.auroraBackgroundEnabled,
+    );
     final isAiConfigured =
         aiSettings.aiApiKey.trim().isNotEmpty &&
         aiSettings.aiBaseUrl.trim().isNotEmpty &&
@@ -271,8 +276,10 @@ class _AIAssistantScreenState extends ConsumerState<AIAssistantScreen> {
         ),
         actions: [
           if (chatSession.messages.isNotEmpty)
-            IconButton(
-              icon: const Icon(LucideIcons.trash2),
+            AuroraGlassIconButton(
+              icon: LucideIcons.trash2,
+              color: weatherContrast.foreground,
+              iconSize: 20,
               onPressed: () {
                 ref.read(chatProvider.notifier).clearHistory();
               },
@@ -436,14 +443,10 @@ class _AIAssistantScreenState extends ConsumerState<AIAssistantScreen> {
 
   /// 构建输入指示器
   Widget _buildTypingIndicator() {
-    return Container(
+    return AuroraGlassCard(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: context.uiTokens.cardBackground,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: context.uiTokens.cardBorder),
-      ),
+      borderRadius: 14,
       child: Row(
         children: [
           Container(
@@ -473,53 +476,43 @@ class _AIAssistantScreenState extends ConsumerState<AIAssistantScreen> {
 
   /// 构建输入区域
   Widget _buildInputArea(bool isAiConfigured) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-      decoration: BoxDecoration(
-        color: context.uiTokens.cardBackground,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: context.uiTokens.cardBorder),
-      ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Expanded(
-            child: TextField(
-              controller: _messageController,
-              focusNode: _focusNode,
-              decoration: InputDecoration(
-                hintText: context.tr(isAiConfigured ? '输入消息...' : '请先完成 AI 设置'),
-                filled: true,
-                fillColor: Theme.of(context).colorScheme.surface,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide.none,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide(color: context.uiTokens.cardBorder),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide(
-                    color: context.uiTokens.selectedBorder,
+            child: AuroraGlassCard(
+              borderRadius: 18,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              child: TextField(
+                controller: _messageController,
+                focusNode: _focusNode,
+                decoration: InputDecoration(
+                  hintText: context.tr(
+                    isAiConfigured ? '输入消息...' : '请先完成 AI 设置',
+                  ),
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 10,
                   ),
                 ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
+                maxLines: null,
+                enabled: isAiConfigured,
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => _sendMessage(),
               ),
-              maxLines: null,
-              enabled: isAiConfigured,
-              textInputAction: TextInputAction.send,
-              onSubmitted: (_) => _sendMessage(),
             ),
           ),
           const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(LucideIcons.send),
+          AuroraGlassIconButton(
+            icon: LucideIcons.send,
             tooltip: context.tr('发送'),
+            size: 48,
+            iconSize: 20,
             onPressed: _isTyping || !isAiConfigured ? null : _sendMessage,
           ),
         ],

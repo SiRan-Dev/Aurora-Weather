@@ -5,7 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../app_localizations.dart';
 import '../models/weather_models.dart';
 import '../core/constants/app_constants.dart';
-import '../core/theme/app_theme.dart';
+import 'glass/aurora_glass_card.dart';
 
 /// 7天天气预报组件
 ///
@@ -45,50 +45,42 @@ class DailyForecast extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (daily.isEmpty) return const SizedBox.shrink();
-    final tokens = context.uiTokens;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: tokens.cardBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: tokens.cardBorder),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 头部
-            Row(
-              children: [
-                Icon(
-                  LucideIcons.calendar,
-                  size: 20,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  context.tr('7天预报'),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            // 每日预报列表
-            ...daily.take(7).toList().asMap().entries.map((entry) {
-              return _DailyItem(
-                weather: entry.value,
-                isToday: entry.key == 0,
-                currentWeather: entry.key == 0 ? currentWeather : null,
-                sunrise: entry.key == 0 ? sunrise : null,
-                sunset: entry.key == 0 ? sunset : null,
-                temperatureUnit: temperatureUnit,
-              ).animate().fadeIn(delay: Duration(milliseconds: 50 * entry.key));
-            }),
-          ],
-        ),
+    return AuroraGlassCard(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 头部
+          Row(
+            children: [
+              Icon(
+                LucideIcons.calendar,
+                size: 20,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                context.tr('7天预报'),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // 每日预报列表
+          ...daily.take(7).toList().asMap().entries.map((entry) {
+            return _DailyItem(
+              weather: entry.value,
+              isToday: entry.key == 0,
+              currentWeather: entry.key == 0 ? currentWeather : null,
+              sunrise: entry.key == 0 ? sunrise : null,
+              sunset: entry.key == 0 ? sunset : null,
+              temperatureUnit: temperatureUnit,
+            ).animate().fadeIn(delay: Duration(milliseconds: 50 * entry.key));
+          }),
+        ],
       ),
     ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1);
   }
@@ -155,7 +147,11 @@ class _DailyItem extends StatelessWidget {
     }
 
     final isNight = isToday
-        ? WeatherCode.isNightTime(DateTime.now(), sunrise: sunrise, sunset: sunset)
+        ? WeatherCode.isNightTime(
+            DateTime.now(),
+            sunrise: sunrise,
+            sunset: sunset,
+          )
         : false;
 
     return Padding(

@@ -29,7 +29,10 @@ class SettingsScreen extends ConsumerWidget {
     final weatherCode = weatherState.weatherData != null
         ? int.tryParse(weatherState.weatherData!.current.icon) ?? 100
         : null;
-    final weatherContrast = context.weatherContrastColorsFor(weatherCode);
+    final weatherContrast = context.weatherContrastColorsFor(
+      weatherCode,
+      useWeatherContrast: appSettings.auroraBackgroundEnabled,
+    );
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -79,6 +82,17 @@ class SettingsScreen extends ConsumerWidget {
                                   ref,
                                   themeSettings,
                                 ),
+                              ),
+                              SettingsSwitchTile(
+                                icon: LucideIcons.sparkles,
+                                title: '极光背景',
+                                subtitle: '随天气变化的动态渐变背景；关闭后使用纯色背景',
+                                value: appSettings.auroraBackgroundEnabled,
+                                onChanged: (value) {
+                                  ref
+                                      .read(settingsProvider.notifier)
+                                      .setAuroraBackgroundEnabled(value);
+                                },
                               ),
                             ],
                           ),

@@ -8,7 +8,7 @@ import '../../providers/scheduled_broadcast_provider.dart';
 import '../../services/scheduled_broadcast_service.dart';
 import '../../services/notification_service.dart';
 import '../../widgets/settings/settings.dart';
-import '../../core/theme/app_theme.dart';
+import '../../widgets/glass/aurora_glass_card.dart';
 
 class ScheduledBroadcastScreen extends ConsumerWidget {
   const ScheduledBroadcastScreen({super.key});
@@ -36,17 +36,8 @@ class ScheduledBroadcastScreen extends ConsumerWidget {
   }
 
   static Widget _buildDescriptionCard(BuildContext context) {
-    final cardBorderSide = BorderSide(
-      color: context.uiTokens.cardBorder,
-      width: 1,
-    );
-    return Container(
+    return AuroraGlassCard(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.uiTokens.cardBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.fromBorderSide(cardBorderSide),
-      ),
       child: Row(
         children: [
           Icon(

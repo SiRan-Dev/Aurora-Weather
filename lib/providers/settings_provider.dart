@@ -45,6 +45,9 @@ class AppSettings {
   /// 是否显示体感温度
   final bool showFeelsLike;
 
+  /// 是否启用极光背景
+  final bool auroraBackgroundEnabled;
+
   /// 是否显示天气助手
   final bool showAIAssistant;
 
@@ -78,6 +81,7 @@ class AppSettings {
     this.refreshInterval = 30,
     this.temperatureUnit = 'celsius',
     this.showFeelsLike = true,
+    this.auroraBackgroundEnabled = true,
     this.showAIAssistant = false,
     this.aiProviderType = AiProviderType.openAiCompatible,
     this.aiApiKey = '',
@@ -103,6 +107,7 @@ class AppSettings {
   /// [refreshInterval]: 刷新间隔
   /// [temperatureUnit]: 温度单位
   /// [showFeelsLike]: 是否显示体感温度
+  /// [auroraBackgroundEnabled]: 是否启用极光背景
   /// [showAIAssistant]: 是否显示天气助手
   /// [aiProviderType]: AI 服务提供商
   /// [aiApiKey]: AI 服务 API Key
@@ -119,6 +124,7 @@ class AppSettings {
     int? refreshInterval,
     String? temperatureUnit,
     bool? showFeelsLike,
+    bool? auroraBackgroundEnabled,
     bool? showAIAssistant,
     AiProviderType? aiProviderType,
     String? aiApiKey,
@@ -139,6 +145,8 @@ class AppSettings {
       refreshInterval: refreshInterval ?? this.refreshInterval,
       temperatureUnit: temperatureUnit ?? this.temperatureUnit,
       showFeelsLike: showFeelsLike ?? this.showFeelsLike,
+      auroraBackgroundEnabled:
+          auroraBackgroundEnabled ?? this.auroraBackgroundEnabled,
       showAIAssistant: showAIAssistant ?? this.showAIAssistant,
       aiProviderType: aiProviderType ?? this.aiProviderType,
       aiApiKey: aiApiKey ?? this.aiApiKey,
@@ -177,6 +185,9 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
 
   /// 显示体感温度设置键
   static const String _keyShowFeelsLike = 'show_feels_like';
+
+  /// 极光背景设置键
+  static const String _keyAuroraBackground = 'aurora_background_enabled';
 
   /// 显示天气助手设置键
   static const String _keyShowAIAssistant = 'show_ai_assistant';
@@ -245,6 +256,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
       refreshInterval: prefs.getInt(_keyRefreshInterval) ?? 30,
       temperatureUnit: prefs.getString(_keyTemperatureUnit) ?? 'celsius',
       showFeelsLike: prefs.getBool(_keyShowFeelsLike) ?? true,
+      auroraBackgroundEnabled: prefs.getBool(_keyAuroraBackground) ?? true,
       showAIAssistant: prefs.getBool(_keyShowAIAssistant) ?? false,
       aiProviderType: aiProviderType,
       aiApiKey: prefs.getString(_keyAiApiKey) ?? '',
@@ -318,6 +330,15 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyShowFeelsLike, value);
     state = state.copyWith(showFeelsLike: value);
+  }
+
+  /// 设置是否启用极光背景
+  ///
+  /// [value]: 是否启用
+  Future<void> setAuroraBackgroundEnabled(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyAuroraBackground, value);
+    state = state.copyWith(auroraBackgroundEnabled: value);
   }
 
   /// 设置是否显示天气助手

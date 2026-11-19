@@ -3,7 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../app_localizations.dart';
 import '../models/weather_models.dart';
-import '../core/theme/app_theme.dart';
+import 'glass/aurora_glass_card.dart';
 
 class WeatherIndicesCard extends StatelessWidget {
   final List<WeatherIndices> indices;
@@ -13,87 +13,79 @@ class WeatherIndicesCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (indices.isEmpty) return const SizedBox.shrink();
-    final tokens = context.uiTokens;
 
     // 只取前6个指数
     final displayIndices = indices.take(6).toList();
 
-    return Container(
-      decoration: BoxDecoration(
-        color: tokens.cardBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: tokens.cardBorder),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  LucideIcons.lightbulb,
-                  size: 20,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  context.tr('生活指数'),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w500,
+    return AuroraGlassCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                LucideIcons.lightbulb,
+                size: 20,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                context.tr('生活指数'),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // 两行三列布局
+          Column(
+            children: [
+              // 第一行
+              Row(
+                children: [
+                  Expanded(child: _IndexItem(index: displayIndices[0])),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: displayIndices.length > 1
+                        ? _IndexItem(index: displayIndices[1])
+                        : const SizedBox(),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // 两行三列布局
-            Column(
-              children: [
-                // 第一行
-                Row(
-                  children: [
-                    Expanded(child: _IndexItem(index: displayIndices[0])),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: displayIndices.length > 1
-                          ? _IndexItem(index: displayIndices[1])
-                          : const SizedBox(),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: displayIndices.length > 2
-                          ? _IndexItem(index: displayIndices[2])
-                          : const SizedBox(),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                // 第二行
-                Row(
-                  children: [
-                    Expanded(
-                      child: displayIndices.length > 3
-                          ? _IndexItem(index: displayIndices[3])
-                          : const SizedBox(),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: displayIndices.length > 4
-                          ? _IndexItem(index: displayIndices[4])
-                          : const SizedBox(),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: displayIndices.length > 5
-                          ? _IndexItem(index: displayIndices[5])
-                          : const SizedBox(),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: displayIndices.length > 2
+                        ? _IndexItem(index: displayIndices[2])
+                        : const SizedBox(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // 第二行
+              Row(
+                children: [
+                  Expanded(
+                    child: displayIndices.length > 3
+                        ? _IndexItem(index: displayIndices[3])
+                        : const SizedBox(),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: displayIndices.length > 4
+                        ? _IndexItem(index: displayIndices[4])
+                        : const SizedBox(),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: displayIndices.length > 5
+                        ? _IndexItem(index: displayIndices[5])
+                        : const SizedBox(),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
       ),
     ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1);
   }

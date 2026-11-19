@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../app_localizations.dart';
 import '../../core/theme/app_theme.dart';
+import '../glass/aurora_glass_card.dart';
 
 /// Aurora UI 风格的设置分组组件
 ///
@@ -82,13 +83,8 @@ class SettingsSection extends StatelessWidget {
                 ),
               ),
               // 内容区域
-              Container(
-                clipBehavior: Clip.antiAlias,
-                decoration: BoxDecoration(
-                  color: tokens.cardBackground,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: tokens.cardBorder),
-                ),
+              AuroraGlassCard(
+                padding: EdgeInsets.zero,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: childrenWithDividers,

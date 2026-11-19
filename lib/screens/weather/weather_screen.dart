@@ -16,6 +16,9 @@ import '../../widgets/daily_forecast.dart';
 import '../../widgets/weather_alert_card.dart';
 import '../../widgets/air_quality_card.dart';
 import '../../widgets/weather_indices_card.dart';
+import '../../widgets/glass/aurora_glass_button.dart';
+import '../../widgets/glass/aurora_glass_card.dart';
+import '../../widgets/glass/aurora_glass_icon_button.dart';
 
 /// 天气主页面
 ///
@@ -156,10 +159,12 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
       sunset: todayDaily?.sunset,
     );
     final weatherCode = int.tryParse(weather.current.icon) ?? 100;
-    final useLightForeground = WeatherGradientScheme.prefersLightForeground(
-      weatherCode,
-      isDark: Theme.of(context).brightness == Brightness.dark,
-    );
+    final useLightForeground =
+        settings.auroraBackgroundEnabled &&
+        WeatherGradientScheme.prefersLightForeground(
+          weatherCode,
+          isDark: Theme.of(context).brightness == Brightness.dark,
+        );
     final foregroundColor = useLightForeground
         ? Colors.white.withValues(alpha: 0.94)
         : Theme.of(context).colorScheme.onSurface;
@@ -209,11 +214,10 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
                 ),
                 Positioned(
                   right: 0,
-                  child: IconButton(
-                    icon: Icon(
-                      LucideIcons.navigation,
-                      color: mutedForegroundColor,
-                    ),
+                  child: AuroraGlassIconButton(
+                    icon: LucideIcons.navigation,
+                    color: mutedForegroundColor,
+                    iconSize: 20,
                     onPressed: _showCitySelector,
                     tooltip: context.tr('导航'),
                   ),
@@ -389,10 +393,11 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  FilledButton.icon(
+                  AuroraGlassButton(
+                    label: context.tr('重试'),
+                    icon: LucideIcons.refreshCw,
                     onPressed: _onRefresh,
-                    icon: const Icon(LucideIcons.refreshCw),
-                    label: Text(context.tr('重试')),
+                    width: 132,
                   ),
                 ],
               ),
@@ -448,10 +453,10 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
   }
 
   Widget _buildEmptyStateAction() {
-    return IconButton(
+    return AuroraGlassIconButton(
       onPressed: _showCitySelector,
       tooltip: context.tr('导航'),
-      icon: const Icon(LucideIcons.navigation),
+      icon: LucideIcons.navigation,
     );
   }
 
@@ -547,37 +552,30 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
   ///
   /// [rain]: 降雨预测数据
   Widget _buildRainPrediction(CaiyunMinuteRain rain) {
-    return Container(
-      decoration: BoxDecoration(
-        color: context.uiTokens.cardBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.uiTokens.cardBorder),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  LucideIcons.droplet,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  context.tr('降雨预测'),
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              context.tr(rain.description),
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ],
-        ),
+    return AuroraGlassCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                LucideIcons.droplet,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                context.tr('降雨预测'),
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            context.tr(rain.description),
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ],
       ),
     );
   }
@@ -595,99 +593,92 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
     CurrentWeather current,
     DailyWeather? todayDaily,
   ) {
-    return Container(
-      decoration: BoxDecoration(
-        color: context.uiTokens.cardBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.uiTokens.cardBorder),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  LucideIcons.info,
-                  size: 20,
-                  color: Theme.of(context).colorScheme.primary,
+    return AuroraGlassCard(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                LucideIcons.info,
+                size: 20,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                context.tr('详细信息'),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          // 第一行详情
+          Row(
+            children: [
+              Expanded(
+                child: _buildDetailItem(
+                  LucideIcons.wind,
+                  context.tr(current.windDir),
+                  context.tr('{value}级', args: {'value': current.windScale}),
+                  null,
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  context.tr('详细信息'),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+              ),
+              Expanded(
+                child: _buildDetailItem(
+                  LucideIcons.droplet,
+                  context.tr('湿度'),
+                  '${current.humidity}%',
+                  null,
                 ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            // 第一行详情
-            Row(
-              children: [
-                Expanded(
-                  child: _buildDetailItem(
-                    LucideIcons.wind,
-                    context.tr(current.windDir),
-                    context.tr('{value}级', args: {'value': current.windScale}),
-                    null,
-                  ),
+              ),
+              Expanded(
+                child: todayDaily != null
+                    ? _buildDetailItem(
+                        LucideIcons.sunrise,
+                        context.tr('日出'),
+                        todayDaily.sunrise,
+                        null,
+                      )
+                    : const SizedBox(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          // 第二行详情
+          Row(
+            children: [
+              Expanded(
+                child: _buildDetailItem(
+                  LucideIcons.eye,
+                  context.tr('能见度'),
+                  '${current.vis} km',
+                  null,
                 ),
-                Expanded(
-                  child: _buildDetailItem(
-                    LucideIcons.droplet,
-                    context.tr('湿度'),
-                    '${current.humidity}%',
-                    null,
-                  ),
+              ),
+              Expanded(
+                child: _buildDetailItem(
+                  LucideIcons.gauge,
+                  context.tr('气压'),
+                  '${current.pressure} hPa',
+                  null,
                 ),
-                Expanded(
-                  child: todayDaily != null
-                      ? _buildDetailItem(
-                          LucideIcons.sunrise,
-                          context.tr('日出'),
-                          todayDaily.sunrise,
-                          null,
-                        )
-                      : const SizedBox(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            // 第二行详情
-            Row(
-              children: [
-                Expanded(
-                  child: _buildDetailItem(
-                    LucideIcons.eye,
-                    context.tr('能见度'),
-                    '${current.vis} km',
-                    null,
-                  ),
-                ),
-                Expanded(
-                  child: _buildDetailItem(
-                    LucideIcons.gauge,
-                    context.tr('气压'),
-                    '${current.pressure} hPa',
-                    null,
-                  ),
-                ),
-                Expanded(
-                  child: todayDaily != null
-                      ? _buildDetailItem(
-                          LucideIcons.sunset,
-                          context.tr('日落'),
-                          todayDaily.sunset,
-                          null,
-                        )
-                      : const SizedBox(),
-                ),
-              ],
-            ),
-          ],
-        ),
+              ),
+              Expanded(
+                child: todayDaily != null
+                    ? _buildDetailItem(
+                        LucideIcons.sunset,
+                        context.tr('日落'),
+                        todayDaily.sunset,
+                        null,
+                      )
+                    : const SizedBox(),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -930,13 +921,12 @@ class _CitySelectorSheetState extends ConsumerState<_CitySelectorSheet> {
                           },
                         ),
                         const SizedBox(height: 8),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            icon: const Icon(LucideIcons.crosshair),
-                            label: Text(context.tr('定位当前位置')),
-                            onPressed: _getCurrentLocation,
-                          ),
+                        AuroraGlassButton(
+                          label: context.tr('定位当前位置'),
+                          icon: LucideIcons.crosshair,
+                          onPressed: _getCurrentLocation,
+                          expanded: true,
+                          height: 44,
                         ),
                       ],
                     ),
@@ -966,14 +956,9 @@ class _CitySelectorSheetState extends ConsumerState<_CitySelectorSheet> {
       itemCount: _searchResults.length,
       itemBuilder: (context, index) {
         final location = _searchResults[index];
-        return Container(
-          clipBehavior: Clip.antiAlias,
+        return AuroraGlassCard(
+          padding: EdgeInsets.zero,
           margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: context.uiTokens.cardBackground,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: context.uiTokens.cardBorder),
-          ),
           child: ListTile(
             leading: const Icon(LucideIcons.mapPin),
             title: Text(location.name),

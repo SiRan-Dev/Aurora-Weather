@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'app_localizations.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/aurora_palette.dart';
@@ -35,9 +36,17 @@ void main() async {
 
   await scheduledBroadcastServiceProvider.initialize();
 
+  await LiquidGlassWidgets.initialize();
+
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
-  runApp(const ProviderScope(child: MyApp()));
+  runApp(
+    LiquidGlassWidgets.wrap(
+      child: const ProviderScope(child: MyApp()),
+      brightnessResolver: Theme.maybeBrightnessOf,
+      adaptiveQuality: true,
+    ),
+  );
 }
 
 class MyApp extends ConsumerStatefulWidget {
@@ -131,9 +140,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
       supportedLocales: AppLocalizations.supportedLocales,
       localeResolutionCallback: (locale, supportedLocales) {
         if (locale == null) {
-          AppLocalizations.updateCurrentLocale(
-            const Locale('zh', 'CN'),
-          );
+          AppLocalizations.updateCurrentLocale(const Locale('zh', 'CN'));
           return const Locale('zh', 'CN');
         }
         for (final supportedLocale in supportedLocales) {
@@ -145,18 +152,18 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
         AppLocalizations.updateCurrentLocale(const Locale('zh', 'CN'));
         return const Locale('zh', 'CN');
       },
-      theme: AppTheme.createTheme(colorScheme: AuroraPalette.lightColorScheme()),
-      darkTheme: AppTheme.createTheme(colorScheme: AuroraPalette.darkColorScheme()),
+      theme: AppTheme.createTheme(
+        colorScheme: AuroraPalette.lightColorScheme(),
+      ),
+      darkTheme: AppTheme.createTheme(
+        colorScheme: AuroraPalette.darkColorScheme(),
+      ),
       themeMode: _flutterThemeMode(themeSettings.themeMode),
       builder: (context, child) {
-        AppLocalizations.updateCurrentLocale(
-          Localizations.localeOf(context),
-        );
+        AppLocalizations.updateCurrentLocale(Localizations.localeOf(context));
         final isDark = Theme.of(context).brightness == Brightness.dark;
         final overlayStyle =
-            (isDark
-                    ? SystemUiOverlayStyle.light
-                    : SystemUiOverlayStyle.dark)
+            (isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark)
                 .copyWith(
                   statusBarColor: Colors.transparent,
                   systemNavigationBarColor: Colors.transparent,

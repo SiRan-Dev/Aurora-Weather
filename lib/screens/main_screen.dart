@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../app_localizations.dart';
 import '../providers/city_provider.dart';
@@ -154,32 +155,17 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     ];
   }
 
-  /// 获取导航目标列表
+  /// 获取导航标签列表
   ///
   /// [showAIAssistant] 是否显示天气助手
   ///
-  /// 返回导航目标列表
-  List<NavigationDestination> _getDestinations(
-    BuildContext context,
-    bool showAIAssistant,
-  ) {
+  /// 返回 Liquid Glass 导航标签列表
+  List<GlassTab> _getTabs(BuildContext context, bool showAIAssistant) {
     return [
-      NavigationDestination(
-        icon: Icon(LucideIcons.cloud),
-        selectedIcon: Icon(LucideIcons.cloud),
-        label: context.tr('天气'),
-      ),
+      GlassTab(icon: Icon(LucideIcons.cloud), label: context.tr('天气')),
       if (showAIAssistant)
-        NavigationDestination(
-          icon: Icon(LucideIcons.brain),
-          selectedIcon: Icon(LucideIcons.brain),
-          label: context.tr('天气助手'),
-        ),
-      NavigationDestination(
-        icon: Icon(LucideIcons.settings),
-        selectedIcon: Icon(LucideIcons.settings),
-        label: context.tr('设置'),
-      ),
+        GlassTab(icon: Icon(LucideIcons.brain), label: context.tr('天气助手')),
+      GlassTab(icon: Icon(LucideIcons.settings), label: context.tr('设置')),
     ];
   }
 
@@ -189,7 +175,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     final weatherState = ref.watch(weatherProvider);
     final showAI = appSettings.showAIAssistant;
     final screens = _getScreens(showAI);
-    final destinations = _getDestinations(context, showAI);
+    final tabs = _getTabs(context, showAI);
     final weatherData = weatherState.weatherData;
     final weatherCode = weatherData != null
         ? (int.tryParse(weatherData.current.icon) ?? 100)
@@ -249,38 +235,43 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       }
     });
 
-    final scaffold = Scaffold(
-      extendBody: false,
-      body: IndexedStack(index: _currentIndex, children: screens),
-      bottomNavigationBar: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            height: 0.5,
-            color: Theme.of(
-              context,
-            ).colorScheme.outlineVariant.withValues(alpha: 0.3),
+    final background =
+        weatherCode != null && appSettings.auroraBackgroundEnabled
+        ? AuroraBackground(
+            weatherCode: weatherCode,
+            child: const SizedBox.expand(),
+          )
+        : ColoredBox(color: Theme.of(context).colorScheme.surface);
+
+    return GlassPage(
+      background: background,
+      child: Scaffold(
+        extendBody: false,
+        body: IndexedStack(index: _currentIndex, children: screens),
+        bottomNavigationBar: SafeArea(
+          top: false,
+          minimum: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+          child: Center(
+            heightFactor: 1,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: GlassTabBar.bottom(
+                tabs: tabs,
+                selectedIndex: _currentIndex,
+                horizontalPadding: 0,
+                verticalPadding: 0,
+                barHeight: 60,
+                barBorderRadius: 30,
+                onTabSelected: (index) {
+                  setState(() {
+                    _currentIndex = index;
+                  });
+                },
+              ),
+            ),
           ),
-          NavigationBar(
-            selectedIndex: _currentIndex,
-            onDestinationSelected: (index) {
-              setState(() {
-                _currentIndex = index;
-              });
-            },
-            destinations: destinations,
-          ),
-        ],
+        ),
       ),
-    );
-
-    if (weatherCode != null) {
-      return AuroraBackground(weatherCode: weatherCode, child: scaffold);
-    }
-
-    return ColoredBox(
-      color: Theme.of(context).colorScheme.surface,
-      child: scaffold,
     );
   }
 }
